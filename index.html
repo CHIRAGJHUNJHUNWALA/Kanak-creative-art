@@ -1,0 +1,2569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kanak Creative Art Order Form</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<style>
+  :root {
+    --bg: #faf8f5;
+    --card: #ffffff;
+    --ink: #2a2420;
+    --muted: #7a7168;
+    --accent: #b5622f;
+    --accent-soft: #f0ddd0;
+    --line: #eae4dc;
+    --good: #4a7c59;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 24px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; font-weight: 700; }
+  .subtitle { color: var(--muted); font-size: 14px; margin: 0 0 20px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 18px;
+  }
+  .entry-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+  .design-row {
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;
+    margin-bottom: 10px;
+  }
+  .btn-remove-row {
+    background: transparent; color: var(--muted); padding: 10px 10px;
+    font-size: 13px; border: 1px solid var(--line); border-radius: 8px;
+  }
+  .btn-remove-row:hover { color: #b04a4a; border-color: #b04a4a; }
+  .price-display {
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 15px;
+    background: var(--bg);
+    color: var(--ink);
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 120px; }
+  .field label { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .field input {
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 15px;
+    background: var(--bg);
+    color: var(--ink);
+    width: 100%;
+  }
+  .field input:focus { outline: none; border-color: var(--accent); }
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 11px 18px;
+  }
+  .btn-add { background: var(--accent); color: white; }
+  .btn-add:hover { opacity: 0.9; }
+  .btn-secondary { background: var(--accent-soft); color: var(--accent); }
+  .btn-secondary:hover { opacity: 0.85; }
+  .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-danger { background: transparent; color: #b04a4a; padding: 4px 8px; font-size: 12px; }
+  .toolbar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px; flex-wrap: wrap; gap: 8px;
+  }
+  .toolbar h2 { font-size: 16px; margin: 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th {
+    text-align: left; padding: 8px 10px; color: var(--muted);
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em;
+    border-bottom: 2px solid var(--line);
+  }
+  td { padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: none; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .rank-badge {
+    display: inline-block; width: 22px; height: 22px; line-height: 22px;
+    text-align: center; border-radius: 50%; background: var(--accent-soft);
+    color: var(--accent); font-size: 11px; font-weight: 700; margin-right: 6px;
+  }
+  .empty-state { text-align: center; color: var(--muted); padding: 30px 10px; font-size: 14px; }
+  .stats-row { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+  .stat {
+    flex: 1; min-width: 140px; background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 14px 16px;
+  }
+  .stat-value { font-size: 24px; font-weight: 700; color: var(--accent); }
+  .stat-label { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .recent-list { max-height: 260px; overflow-y: auto; }
+  select {
+    padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
+    font-size: 13px; background: var(--bg); color: var(--ink); font-weight: 600;
+  }
+  .order-row {
+    cursor: pointer; padding: 10px; border-bottom: 1px solid var(--line);
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 6px;
+  }
+  .order-row:hover { background: var(--accent-soft); }
+  .order-row:last-child { border-bottom: none; }
+  .order-row-left { display: flex; flex-direction: column; }
+  .order-row-title { font-weight: 700; font-size: 14px; }
+  .order-row-sub { font-size: 12px; color: var(--muted); }
+  .order-row-right { font-size: 13px; color: var(--accent); font-weight: 600; }
+  .order-detail-panel {
+    background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px; margin: 6px 0 12px;
+  }
+  .order-detail-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px; flex-wrap: wrap; gap: 8px;
+  }
+  .order-detail-line {
+    display: flex; align-items: center; gap: 10px; padding: 6px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .order-detail-line:last-child { border-bottom: none; }
+  .order-detail-line .dline-design { flex: 1; font-weight: 600; }
+  .order-detail-line .dline-sets { color: var(--muted); min-width: 70px; text-align: right; }
+  .order-detail-line input {
+    padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px;
+  }
+  .btn-tiny { padding: 5px 9px; font-size: 12px; }
+  .import-drop {
+    display: block; border: 2px dashed var(--line); border-radius: 8px;
+    padding: 18px; text-align: center; background: var(--bg); cursor: pointer;
+  }
+  .import-drop:hover { border-color: var(--accent); }
+  .import-drop input[type=file] { display: none; }
+  .scan-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  .scan-gun-box {
+    display: flex; align-items: center; gap: 10px; background: var(--accent);
+    border-radius: 8px; padding: 12px 14px; flex: 1; min-width: 220px;
+  }
+  .scan-gun-box .dot {
+    width: 9px; height: 9px; border-radius: 50%; background: white;
+    flex-shrink: 0; box-shadow: 0 0 0 4px rgba(255,255,255,0.25);
+  }
+  .scan-gun-box input {
+    flex: 1; min-width: 120px; background: transparent; border: none;
+    color: white; font-size: 14px;
+  }
+  .scan-gun-box input:focus { outline: none; }
+  .scan-gun-box input::placeholder { color: rgba(255,255,255,0.75); }
+  #qr-reader { max-width: 320px; margin: 10px auto; border-radius: 8px; overflow: hidden; display: none; }
+  #qr-reader.active { display: block; }
+  .status-msg { font-size: 13px; color: var(--good); margin-top: 8px; min-height: 16px; }
+  .loading { text-align: center; color: var(--muted); padding: 40px; }
+  .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
+  @media (max-width: 480px) { .mode-grid { grid-template-columns: 1fr; } }
+  .mode-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 28px 18px; text-align: center; cursor: pointer; font-family: inherit;
+  }
+  .mode-card:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .mode-icon { font-size: 36px; margin-bottom: 10px; }
+  .mode-title { font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+  .mode-sub { font-size: 12px; color: var(--muted); }
+  .fair-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 4px; border-bottom: 1px solid var(--line);
+  }
+  .fair-row:last-child { border-bottom: none; }
+  .fair-row-title { font-weight: 700; font-size: 14px; }
+  .fair-row-sub { font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+  <div id="fyBar" style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:2px;">
+    <h1 style="margin:0; font-size:22px;">Kanak Creative Art</h1>
+    <div style="display:flex; gap:8px;">
+      <button id="backupPillBtn" style="background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); border-radius: 20px; padding: 5px 14px; font-size: 12px; font-weight: 700; cursor: pointer;">💾 Backup</button>
+      <button id="fyBadge" style="background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); border-radius: 20px; padding: 5px 14px; font-size: 12px; font-weight: 700; cursor: pointer;">FY —</button>
+    </div>
+  </div>
+  <div style="font-size:14px; font-weight:400; color: var(--muted); margin-bottom:4px;">Order Form</div>
+  <div id="syncStatusEl" style="font-size:11px; margin-bottom:12px; min-height:14px;"></div>
+  <div id="fyPickerOverlay" style="display:none; position:fixed; inset:0; background:rgba(42,36,32,0.55); z-index:1000; align-items:center; justify-content:center; padding:20px;">
+    <div style="background: var(--card); border-radius: 14px; padding: 22px; max-width: 320px; width:100%; max-height:80vh; overflow-y:auto;">
+      <div style="font-size:16px; font-weight:700; margin-bottom:14px;">Select Financial Year</div>
+      <div id="fyOptionsWrap" style="display:flex; flex-direction:column; gap:8px;"></div>
+      <button class="btn-secondary btn-tiny" id="fyCancelBtn" style="width:100%; margin-top:14px;">Cancel</button>
+    </div>
+  </div>
+
+  <div id="backupModalOverlay" style="display:none; position:fixed; inset:0; background:rgba(42,36,32,0.55); z-index:1000; align-items:center; justify-content:center; padding:20px;">
+    <div style="background: var(--card); border-radius: 14px; padding: 22px; max-width: 440px; width:100%; max-height:88vh; overflow-y:auto;">
+      <div style="font-size:16px; font-weight:700; margin-bottom:4px; color: var(--accent);">Backup Your Data</div>
+      <p style="font-size: 13px; color: var(--ink); margin: 0 0 14px;">Download a backup file often — this is the safest copy of your data, independent of anything else. This backs up everything, across Shop and all Trade Fairs.</p>
+      <div style="display:flex; gap:10px; flex-wrap: wrap; align-items:center;">
+        <button class="btn-add" id="backupBtn">Download Backup</button>
+        <button class="btn-secondary" id="copyTextBtn">Copy Backup as Text</button>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap: wrap; align-items:center; margin-top:10px;">
+        <button class="btn-secondary" id="restoreBtn">Restore from Backup File</button>
+        <button class="btn-secondary" id="restoreTextBtn">Restore from Pasted Text</button>
+        <input type="file" id="restoreFileInput" accept="application/json" style="display:none;">
+      </div>
+      <div id="lastBackupNote" style="font-size:12px; color: var(--muted); margin-top:8px;"></div>
+      <div id="copyTextWrap" style="margin-top: 12px; display:none;">
+        <p style="font-size: 12px; color: var(--muted); margin: 0 0 6px;">Tap inside the box below, select all, and copy — paste it into Notes, WhatsApp-to-self, or email as a safe backup. To restore later, paste this exact text into a .json file and use "Restore from Backup".</p>
+        <textarea id="backupTextArea" readonly style="width:100%; height:140px; font-family: monospace; font-size: 12px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg);"></textarea>
+        <button class="btn-secondary btn-tiny" id="selectAllTextBtn" style="margin-top: 6px;">Select All</button>
+      </div>
+      <div id="restoreTextWrap" style="margin-top: 12px; display:none;">
+        <p style="font-size: 12px; color: var(--muted); margin: 0 0 6px;">Paste your backup text below, then click Load.</p>
+        <textarea id="restoreTextArea" style="width:100%; height:140px; font-family: monospace; font-size: 12px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg);" placeholder="Paste backup JSON here..."></textarea>
+        <div style="margin-top:6px; display:flex; gap:8px;">
+          <button class="btn-add btn-tiny" id="loadRestoreTextBtn">Load</button>
+          <button class="btn-secondary btn-tiny" id="cancelRestoreTextBtn">Cancel</button>
+        </div>
+      </div>
+      <div id="restoreConfirmWrap" style="margin-top: 12px; display:none;"></div>
+      <button class="btn-secondary btn-tiny" id="backupModalCloseBtn" style="width:100%; margin-top:16px;">Close</button>
+    </div>
+  </div>
+
+  <div id="homeScreen">
+    <div class="mode-grid">
+      <button class="mode-card" id="goShopBtn">
+        <div class="mode-icon">🏬</div>
+        <div class="mode-title">Shop</div>
+        <div class="mode-sub">Order numbers continue automatically</div>
+      </button>
+      <button class="mode-card" id="goTradeFairBtn">
+        <div class="mode-icon">🎪</div>
+        <div class="mode-title">Trade Fair</div>
+        <div class="mode-sub">Pick a fair, enter order number each time</div>
+      </button>
+    </div>
+  </div>
+
+  <div id="tradeFairListScreen" style="display:none;">
+    <div class="card">
+      <div class="toolbar">
+        <h2>Trade Fairs</h2>
+        <button class="btn-secondary btn-tiny" id="backToHomeFromListBtn">← Back</button>
+      </div>
+      <button class="btn-add" id="showAddTradeFairBtn" style="margin-bottom:14px;">+ Add New Trade Fair</button>
+      <div id="addTradeFairForm" style="display:none; margin-bottom:16px; padding:14px; background: var(--bg); border-radius:8px; border:1px solid var(--line);">
+        <div style="font-weight:600; font-size:13.5px; margin-bottom:10px;" id="tradeFairFormTitle">New Trade Fair</div>
+        <div class="entry-row">
+          <div class="field"><label>Trade Fair Name</label><input type="text" id="newFairName" placeholder="e.g. Surat Textile Expo"></div>
+          <div class="field"><label>City</label><input type="text" id="newFairCity" placeholder="e.g. Surat"></div>
+        </div>
+        <div class="entry-row" style="margin-top:10px;">
+          <div class="field"><label>Start Date</label><input type="date" id="newFairStartDate"></div>
+          <div class="field"><label>End Date</label><input type="date" id="newFairEndDate"></div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <button class="btn-add btn-tiny" id="createTradeFairBtn">Create</button>
+          <button class="btn-secondary btn-tiny" id="cancelAddTradeFairBtn">Cancel</button>
+        </div>
+      </div>
+      <div id="tradeFairListWrap"></div>
+    </div>
+  </div>
+
+  <div id="entryScreen" style="display:none;">
+    <div class="card" id="contextBar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding:14px 18px;">
+      <div>
+        <div style="font-size:11px; color: var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Currently working in</div>
+        <div style="font-size:16px; font-weight:700; color: var(--accent);" id="contextLabel">Shop</div>
+      </div>
+      <button class="btn-secondary btn-tiny" id="switchContextBtn">Switch</button>
+    </div>
+
+    <div class="card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding:14px 18px;">
+      <div>
+        <div style="font-size:11px; color: var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Design Catalog</div>
+        <div style="font-size:16px; font-weight:700; color: var(--accent);" id="catalogCount">0 designs</div>
+        <div style="font-size:11px; color: var(--muted); margin-top:2px;" id="catalogSummary"></div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn-add btn-tiny" id="catalogUploadBtn">Upload / Update List</button>
+        <button class="btn-secondary btn-tiny" id="clearCatalogBtn">Clear</button>
+      </div>
+      <input type="file" id="catalogFileInput" accept=".xlsx,.xls" style="display:none;">
+    </div>
+
+    <div class="card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding:14px 18px;">
+      <div>
+        <div style="font-size:11px; color: var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Customer Database</div>
+        <div style="font-size:16px; font-weight:700; color: var(--accent);" id="customerDBCount">0 customers</div>
+        <div style="font-size:11px; color: var(--muted); margin-top:2px;" id="customerDBSummary"></div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn-add btn-tiny" id="customerDBUploadBtn">Upload / Update List</button>
+        <button class="btn-secondary btn-tiny" id="clearCustomerDBBtn">Clear</button>
+      </div>
+      <input type="file" id="customerDBFileInput" accept=".xlsx,.xls" style="display:none;">
+    </div>
+
+    <div class="card">
+      <div class="field" style="max-width: 260px; margin-bottom: 14px;">
+        <label for="orderInput">Order Number <span style="color:#b04a4a;">*</span></label>
+        <input type="text" id="orderInput" placeholder="e.g. O-2201">
+      </div>
+
+      <details id="partyDetailsToggle" style="margin-bottom: 14px;">
+        <summary style="cursor:pointer; font-weight:600; font-size:13.5px; color: var(--muted);">Party Details (optional)</summary>
+        <div style="margin-top: 12px;">
+          <div class="entry-row">
+            <div class="field" style="position:relative;">
+              <label>M/s. (Party Name)</label>
+              <input type="text" id="p-custName" placeholder="Party name" autocomplete="off">
+              <div id="custNameSuggestions" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--card); border:1px solid var(--line); border-radius:8px; margin-top:4px; z-index:50; max-height:180px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
+            </div>
+            <div class="field"><label>Mo.</label><input type="text" id="p-custPhone" placeholder="98xxxxxxxx"></div>
+          </div>
+          <div class="entry-row" style="margin-top:10px;">
+            <div class="field"><label>Haste</label><input type="text" id="p-haste"></div>
+            <div class="field"><label>Agent</label><input type="text" id="p-agent"></div>
+            <div class="field"><label>Party GSTIN</label><input type="text" id="p-gstin"></div>
+          </div>
+          <div class="entry-row" style="margin-top:10px;">
+            <div class="field"><label>State</label><input type="text" id="p-state"></div>
+            <div class="field"><label>City</label><input type="text" id="p-city"></div>
+          </div>
+          <div class="entry-row" style="margin-top:10px;">
+            <div class="field"><label>Consignee</label><input type="text" id="p-consignee"></div>
+            <div class="field"><label>Transport</label><input type="text" id="p-transport"></div>
+            <div class="field"><label>Station</label><input type="text" id="p-station"></div>
+          </div>
+          <div class="entry-row" style="margin-top:10px;">
+            <div class="field"><label>Export To</label><input type="text" id="p-expo"></div>
+            <div class="field"><label>Remarks</label><input type="text" id="p-remarks" placeholder="Notes for this whole order"></div>
+          </div>
+        </div>
+      </details>
+
+      <div class="scan-row">
+        <button class="btn-secondary" id="cameraToggleBtn">📷 Scan with Camera</button>
+        <div class="scan-gun-box">
+          <div class="dot"></div>
+          <input id="gunScanInput" placeholder="Click here, then scan with a USB gun…" autocomplete="off">
+        </div>
+      </div>
+      <div id="qr-reader"></div>
+
+      <div id="designRows"></div>
+
+      <div style="display:flex; gap:10px; margin-top: 10px; flex-wrap: wrap;" id="mainActionRow">
+        <button class="btn-secondary" id="addRowBtn">+ Add Another Design</button>
+        <button class="btn-add" id="addBtn">Save Order</button>
+      </div>
+      <div class="status-msg" id="statusMsg"></div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat"><div class="stat-value" id="statOrders">0</div><div class="stat-label">Sheets entered</div></div>
+      <div class="stat"><div class="stat-value" id="statDesigns">0</div><div class="stat-label">Unique designs</div></div>
+      <div class="stat"><div class="stat-value" id="statSets">0</div><div class="stat-label">Total sets ordered</div></div>
+      <div class="stat"><div class="stat-value" id="statPcs">0</div><div class="stat-label">Total pcs ordered</div></div>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <h2 id="orderSearchTitle">Search Old Orders (Shop)</h2>
+      </div>
+      <div class="entry-row">
+        <div class="field">
+          <label for="orderSearchInput">Order Number or Party Name</label>
+          <input type="text" id="orderSearchInput" placeholder="e.g. O-2201 or party name">
+        </div>
+        <button class="btn-secondary" id="orderSearchBtn">Search</button>
+        <button class="btn-secondary" id="orderSearchClearBtn">Clear</button>
+      </div>
+      <div id="orderSearchResultsWrap" style="margin-top: 14px;"></div>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <h2>Search by Design</h2>
+      </div>
+      <div class="entry-row">
+        <div class="field">
+          <label for="searchInput">Design Number</label>
+          <input type="text" id="searchInput" placeholder="e.g. D-104">
+        </div>
+        <button class="btn-secondary" id="searchBtn">Search</button>
+        <button class="btn-secondary" id="searchClearBtn">Clear</button>
+      </div>
+      <div id="searchResultsWrap" style="margin-top: 14px;"></div>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <h2>Totals by Design</h2>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select id="sortSelect">
+            <option value="most">Sort: Most Ordered</option>
+            <option value="az">Sort: A-Z</option>
+            <option value="sets">Sort: Max Sets to Min</option>
+          </select>
+          <button class="btn-secondary" id="exportBtn">Export CSV</button>
+          <button class="btn-secondary" id="printBtn">Print</button>
+        </div>
+      </div>
+      <div id="totalsTableWrap"></div>
+      <div id="showAllWrap" style="margin-top: 12px; text-align: center;"></div>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <h2>Recent Orders</h2>
+        <button class="btn-secondary" id="clearBtn">Clear All</button>
+      </div>
+      <div class="recent-list" id="recentListWrap"></div>
+    </div>
+  </div>
+
+  <div id="packingModalOverlay" style="display:none; position:fixed; inset:0; background:rgba(42,36,32,0.55); z-index:1000; align-items:center; justify-content:center; padding:20px;">
+    <div style="background: var(--card); border-radius: 14px; padding: 22px; max-width: 380px; width:100%; max-height:88vh; overflow-y:auto;">
+      <div style="font-size:16px; font-weight:700; margin-bottom:4px;">Packing Option</div>
+      <div style="font-size:13px; color: var(--muted); margin-bottom:16px;">Choose how this order should be packed before saving.</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <button class="btn-add packing-choice-btn" data-packing="Thaili Pack">Thaili Pack</button>
+        <button class="btn-add packing-choice-btn" data-packing="Pouch Pack">Pouch Pack</button>
+        <button class="btn-add packing-choice-btn" data-packing="Box Pack">Box Pack</button>
+        <button class="btn-add packing-choice-btn" data-packing="Thaili + Pouch (Stitch Blouse)">Thaili + Pouch (Stitch Blouse)</button>
+      </div>
+      <button class="btn-secondary btn-tiny" id="cancelPackingBtn" style="width:100%; margin-top:14px;">Cancel</button>
+    </div>
+  </div>
+
+  <div id="postSaveOverlay" style="display:none; position:fixed; inset:0; background:rgba(42,36,32,0.55); z-index:1000; align-items:center; justify-content:center; padding:20px;">
+    <div style="background: var(--card); border-radius: 14px; padding: 22px; max-width: 420px; width:100%; max-height:88vh; overflow-y:auto;">
+      <div style="font-size:16px; font-weight:700; margin-bottom:4px;">Order Saved ✓</div>
+      <div style="font-size:13px; color: var(--muted); margin-bottom:16px;" id="postSaveOrderLabel"></div>
+      <button class="btn-add" id="postSavePrintBtn" style="width:100%; margin-bottom:10px;">🖨️ Print / Save as PDF</button>
+      <button class="btn-secondary" id="postSaveWhatsAppBtn" style="width:100%;">📱 Share on WhatsApp</button>
+      <div id="whatsAppShareForm" style="display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--line);">
+        <p style="font-size:12px; color: var(--muted); margin:0 0 8px;">We'll open the order form for you to save as PDF, then open WhatsApp with this number — attach the saved PDF there (WhatsApp doesn't allow websites to attach files automatically).</p>
+        <div class="field" style="margin-bottom:10px;">
+          <label>WhatsApp Number</label>
+          <input type="text" id="whatsAppNumberInput" placeholder="e.g. 9198xxxxxxxx (with country code)">
+        </div>
+        <button class="btn-add btn-tiny" id="whatsAppSendBtn">Open Print + WhatsApp</button>
+      </div>
+      <button class="btn-secondary btn-tiny" id="postSaveCloseBtn" style="width:100%; margin-top:14px;">Done, Close</button>
+    </div>
+  </div>
+
+<script>
+  const STORAGE_KEY = 'design-order-entries';
+  const CATALOG_STORAGE_KEY = 'design-catalog-v1';
+  const CUSTOMER_DB_KEY = 'customer-database-v1';
+  let customerDB = []; // [{name, gst, mobile, state, city}]
+  let customerDBUpdatedAt = null;
+  const TRADE_FAIRS_KEY = 'trade-fairs-v1';
+  const SHOP_COUNTER_KEY = 'shop-order-counter-v1';
+  const FY_STORAGE_KEY = 'current-fy-v1';
+  let currentFY = null;
+  let catalog = []; // [{design, qr}]
+  let entries = [];
+  let tradeFairs = []; // [{id, name, city, createdAt}]
+  let shopOrderCounters = {}; // { "2026-27": 45, ... }
+  let currentChannel = null; // 'shop' | 'tradefair'
+  let currentTradeFair = null; // {id, name, city}
+  let editingFairId = null;
+  let pendingDeleteFairId = null;
+  let usingFallback = false;
+  let fallbackNoticeShown = false;
+
+  const orderInput = document.getElementById('orderInput');
+  const fyBadge = document.getElementById('fyBadge');
+  const syncStatusEl = document.getElementById('syncStatusEl');
+  const backupPillBtn = document.getElementById('backupPillBtn');
+  const backupModalOverlay = document.getElementById('backupModalOverlay');
+  const backupModalCloseBtn = document.getElementById('backupModalCloseBtn');
+  const fyPickerOverlay = document.getElementById('fyPickerOverlay');
+  const fyOptionsWrap = document.getElementById('fyOptionsWrap');
+  const fyCancelBtn = document.getElementById('fyCancelBtn');
+  const homeScreen = document.getElementById('homeScreen');
+  const tradeFairListScreen = document.getElementById('tradeFairListScreen');
+  const entryScreen = document.getElementById('entryScreen');
+  const goShopBtn = document.getElementById('goShopBtn');
+  const goTradeFairBtn = document.getElementById('goTradeFairBtn');
+  const backToHomeFromListBtn = document.getElementById('backToHomeFromListBtn');
+  const showAddTradeFairBtn = document.getElementById('showAddTradeFairBtn');
+  const addTradeFairForm = document.getElementById('addTradeFairForm');
+  const tradeFairFormTitle = document.getElementById('tradeFairFormTitle');
+  const newFairName = document.getElementById('newFairName');
+  const newFairCity = document.getElementById('newFairCity');
+  const newFairStartDate = document.getElementById('newFairStartDate');
+  const newFairEndDate = document.getElementById('newFairEndDate');
+  const createTradeFairBtn = document.getElementById('createTradeFairBtn');
+  const cancelAddTradeFairBtn = document.getElementById('cancelAddTradeFairBtn');
+  const tradeFairListWrap = document.getElementById('tradeFairListWrap');
+  const contextLabel = document.getElementById('contextLabel');
+  const switchContextBtn = document.getElementById('switchContextBtn');
+  const orderSearchTitle = document.getElementById('orderSearchTitle');
+  const orderSearchInput = document.getElementById('orderSearchInput');
+  const orderSearchBtn = document.getElementById('orderSearchBtn');
+  const orderSearchClearBtn = document.getElementById('orderSearchClearBtn');
+  const orderSearchResultsWrap = document.getElementById('orderSearchResultsWrap');
+  const postSaveOverlay = document.getElementById('postSaveOverlay');
+  const postSaveOrderLabel = document.getElementById('postSaveOrderLabel');
+  const postSavePrintBtn = document.getElementById('postSavePrintBtn');
+  const postSaveWhatsAppBtn = document.getElementById('postSaveWhatsAppBtn');
+  const whatsAppShareForm = document.getElementById('whatsAppShareForm');
+  const whatsAppNumberInput = document.getElementById('whatsAppNumberInput');
+  const whatsAppSendBtn = document.getElementById('whatsAppSendBtn');
+  const postSaveCloseBtn = document.getElementById('postSaveCloseBtn');
+  const catalogFileInput = document.getElementById('catalogFileInput');
+  const catalogUploadBtn = document.getElementById('catalogUploadBtn');
+  const customerDBCount = document.getElementById('customerDBCount');
+  const customerDBSummary = document.getElementById('customerDBSummary');
+  const customerDBUploadBtn = document.getElementById('customerDBUploadBtn');
+  const customerDBFileInput = document.getElementById('customerDBFileInput');
+  const clearCustomerDBBtn = document.getElementById('clearCustomerDBBtn');
+  const custNameSuggestions = document.getElementById('custNameSuggestions');
+  const catalogSummary = document.getElementById('catalogSummary');
+  const catalogCount = document.getElementById('catalogCount');
+  const clearCatalogBtn = document.getElementById('clearCatalogBtn');
+  const cameraToggleBtn = document.getElementById('cameraToggleBtn');
+  const gunScanInput = document.getElementById('gunScanInput');
+  const partyFieldIds = ['p-custName', 'p-custPhone', 'p-haste', 'p-agent', 'p-gstin', 'p-state', 'p-city', 'p-consignee', 'p-transport', 'p-station', 'p-expo', 'p-remarks'];
+  function getPartyDetailsFromForm() {
+    return {
+      custName: document.getElementById('p-custName').value.trim(),
+      custPhone: document.getElementById('p-custPhone').value.trim(),
+      haste: document.getElementById('p-haste').value.trim(),
+      agent: document.getElementById('p-agent').value.trim(),
+      gstin: document.getElementById('p-gstin').value.trim(),
+      state: document.getElementById('p-state').value.trim(),
+      city: document.getElementById('p-city').value.trim(),
+      consignee: document.getElementById('p-consignee').value.trim(),
+      transport: document.getElementById('p-transport').value.trim(),
+      station: document.getElementById('p-station').value.trim(),
+      expo: document.getElementById('p-expo').value.trim(),
+      remarks: document.getElementById('p-remarks').value.trim()
+    };
+  }
+  function clearPartyDetailsForm() {
+    partyFieldIds.forEach(id => { document.getElementById(id).value = ''; });
+  }
+  function isPartyDetailsEmpty(p) {
+    if (!p) return true;
+    return Object.values(p).every(v => !v);
+  }
+  const designRows = document.getElementById('designRows');
+  const addRowBtn = document.getElementById('addRowBtn');
+  const addBtn = document.getElementById('addBtn');
+  const mainActionRow = document.getElementById('mainActionRow');
+  const packingModalOverlay = document.getElementById('packingModalOverlay');
+  const cancelPackingBtn = document.getElementById('cancelPackingBtn');
+  const searchInput = document.getElementById('searchInput');
+  const searchBtn = document.getElementById('searchBtn');
+  const searchClearBtn = document.getElementById('searchClearBtn');
+  const searchResultsWrap = document.getElementById('searchResultsWrap');
+  const statusMsg = document.getElementById('statusMsg');
+  const statOrders = document.getElementById('statOrders');
+  const statDesigns = document.getElementById('statDesigns');
+  const statSets = document.getElementById('statSets');
+  const statPcs = document.getElementById('statPcs');
+  const totalsTableWrap = document.getElementById('totalsTableWrap');
+  const recentListWrap = document.getElementById('recentListWrap');
+  const exportBtn = document.getElementById('exportBtn');
+  const printBtn = document.getElementById('printBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const sortSelect = document.getElementById('sortSelect');
+  const showAllWrap = document.getElementById('showAllWrap');
+  const backupBtn = document.getElementById('backupBtn');
+  const copyTextBtn = document.getElementById('copyTextBtn');
+  const restoreBtn = document.getElementById('restoreBtn');
+  const restoreTextBtn = document.getElementById('restoreTextBtn');
+  const restoreFileInput = document.getElementById('restoreFileInput');
+  const lastBackupNote = document.getElementById('lastBackupNote');
+  const copyTextWrap = document.getElementById('copyTextWrap');
+  const backupTextArea = document.getElementById('backupTextArea');
+  const selectAllTextBtn = document.getElementById('selectAllTextBtn');
+  const restoreTextWrap = document.getElementById('restoreTextWrap');
+  const restoreTextArea = document.getElementById('restoreTextArea');
+  const loadRestoreTextBtn = document.getElementById('loadRestoreTextBtn');
+  const cancelRestoreTextBtn = document.getElementById('cancelRestoreTextBtn');
+  const restoreConfirmWrap = document.getElementById('restoreConfirmWrap');
+
+  let totalsSortMode = 'most';
+  let totalsShowAll = false;
+  let expandedOrders = new Set();
+  let editingOrderKey = null;
+  let editingRows = [];
+  let editingOrderNumber = '';
+  let editingParty = {};
+  let editingPacking = '';
+  let linesSinceBackup = 0;
+  let pendingDeleteKey = null;
+  let clearAllPending = false;
+  let clearCatalogPending = false;
+  let pendingRestore = null; // { incoming: [...] }
+  let lastSavedOrder = null; // { order, party, items } snapshot for post-save modal
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // ================= Offline-first storage layer =================
+  // Every save writes to IndexedDB FIRST (always works, zero internet needed).
+  // Firestore is the real team-shared cloud backend once hosted as a real website.
+  // window.storage (Claude's artifact storage) is a secondary fallback, only relevant
+  // while testing inside a Claude chat preview — it has no effect once deployed standalone.
+  const IDB_NAME = 'kanak-order-tracker-db';
+  const IDB_STORE = 'kv';
+  let idbInstance = null;
+  let pendingSyncKeys = new Set();
+  let lastSyncStatus = 'unknown'; // 'synced' | 'pending' | 'offline' | 'unknown'
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCUAuNTW7qJ8RF9nQtAIRqs-6xzUgwMoZk",
+    authDomain: "kanak-creative-art.firebaseapp.com",
+    projectId: "kanak-creative-art",
+    storageBucket: "kanak-creative-art.firebasestorage.app",
+    messagingSenderId: "1085356934668",
+    appId: "1:1085356934668:web:6109e4af2f1b073be35029",
+    measurementId: "G-TMVV3LT39F"
+  };
+  let firestoreDb = null;
+  let firebaseAuthReady = null; // becomes a resolved Promise once signed in
+  try {
+    if (typeof firebase !== 'undefined') {
+      firebase.initializeApp(firebaseConfig);
+      firestoreDb = firebase.firestore();
+      firebaseAuthReady = new Promise((resolve) => {
+        firebase.auth().onAuthStateChanged((user) => {
+          if (user) {
+            resolve(user);
+          } else {
+            firebase.auth().signInAnonymously().catch(() => resolve(null));
+          }
+        });
+      });
+    }
+  } catch (e) {
+    firestoreDb = null; // Firebase SDK didn't load here (e.g. blocked in a chat preview) — app still works offline
+  }
+
+  async function ensureFirebaseAuth() {
+    if (!firestoreDb || !firebaseAuthReady) return false;
+    try {
+      await Promise.race([
+        firebaseAuthReady,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('auth timeout')), 6000))
+      ]);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function openIDB() {
+    return new Promise((resolve, reject) => {
+      if (idbInstance) return resolve(idbInstance);
+      if (!window.indexedDB) return reject(new Error('IndexedDB not supported'));
+      const req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+      };
+      req.onsuccess = () => { idbInstance = req.result; resolve(idbInstance); };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function idbSet(key, value) {
+    try {
+      const db = await openIDB();
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE).put(value, key);
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (e) {
+      return false; // IndexedDB unavailable — very rare, but don't crash the app
+    }
+  }
+
+  async function idbGet(key) {
+    try {
+      const db = await openIDB();
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, 'readonly');
+        const req = tx.objectStore(IDB_STORE).get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    } catch (e) {
+      return undefined;
+    }
+  }
+
+  function updateSyncIndicator() {
+    if (!syncStatusEl) return;
+    if (pendingSyncKeys.size > 0) {
+      syncStatusEl.textContent = `⏳ ${pendingSyncKeys.size} saved offline — will sync when online`;
+      syncStatusEl.style.color = '#b06a2f';
+    } else if (lastSyncStatus === 'synced') {
+      syncStatusEl.textContent = firestoreDb ? '✓ Synced to team database' : '✓ Saved on this device';
+      syncStatusEl.style.color = 'var(--good)';
+    } else {
+      syncStatusEl.textContent = '';
+    }
+  }
+
+  async function cloudSet(key, value) {
+    // Try the real Firestore backend first.
+    if (firestoreDb) {
+      const authed = await ensureFirebaseAuth();
+      if (!authed) throw new Error('not authenticated yet');
+      await firestoreDb.collection('kv').doc(key).set({
+        value: value,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      return true;
+    }
+    // Fall back to Claude's artifact storage (only works inside a Claude chat preview).
+    if (window.storage) {
+      await window.storage.set(key, JSON.stringify(value), false);
+      return true;
+    }
+    throw new Error('no cloud backend available');
+  }
+
+  async function cloudGet(key) {
+    if (firestoreDb) {
+      const authed = await ensureFirebaseAuth();
+      if (!authed) return null;
+      const doc = await firestoreDb.collection('kv').doc(key).get();
+      return doc.exists ? doc.data().value : null;
+    }
+    if (window.storage) {
+      const result = await window.storage.get(key, false);
+      return (result && result.value) ? JSON.parse(result.value) : null;
+    }
+    return null;
+  }
+
+  async function persistData(key, value, shared) {
+    // 1. Always save locally first — this always succeeds, online or offline.
+    await idbSet(key, value);
+    // 2. Best-effort mirror to the cloud for team sharing.
+    try {
+      await Promise.race([
+        cloudSet(key, value),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000))
+      ]);
+      pendingSyncKeys.delete(key);
+      lastSyncStatus = 'synced';
+    } catch (e) {
+      pendingSyncKeys.add(key);
+      lastSyncStatus = 'pending';
+    }
+    updateSyncIndicator();
+  }
+
+  async function loadData(key, shared, fallbackValue) {
+    // Try the cloud first (freshest team data) but never hang if offline.
+    let cloudValue = null;
+    try {
+      cloudValue = await Promise.race([
+        cloudGet(key),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+      ]);
+    } catch (e) { /* offline, no cloud backend here, or timed out — fall back to local */ }
+    if (cloudValue !== null && cloudValue !== undefined) {
+      idbSet(key, cloudValue); // refresh local offline cache in background
+      return cloudValue;
+    }
+    const local = await idbGet(key);
+    return (local !== undefined) ? local : fallbackValue;
+  }
+
+  async function retryPendingSync() {
+    if (pendingSyncKeys.size === 0) return;
+    const keys = Array.from(pendingSyncKeys);
+    for (const key of keys) {
+      try {
+        const value = await idbGet(key);
+        if (value === undefined) { pendingSyncKeys.delete(key); continue; }
+        await cloudSet(key, value);
+        pendingSyncKeys.delete(key);
+        lastSyncStatus = 'synced';
+      } catch (e) { /* still offline, try again later */ }
+    }
+    updateSyncIndicator();
+  }
+  window.addEventListener('online', retryPendingSync);
+  setInterval(retryPendingSync, 20000);
+  // ================= End offline-first storage layer =================
+
+  async function loadEntries() {
+    entries = await loadData(STORAGE_KEY, false, []);
+    render();
+  }
+
+  // ---------- Screens ----------
+  function showScreen(name) {
+    homeScreen.style.display = (name === 'home') ? '' : 'none';
+    tradeFairListScreen.style.display = (name === 'tradeFairList') ? '' : 'none';
+    entryScreen.style.display = (name === 'entry') ? '' : 'none';
+    if (name === 'tradeFairList') renderTradeFairList();
+    if (name === 'entry') updateContextBar();
+  }
+
+  // ---------- Trade Fairs ----------
+  async function loadTradeFairs() {
+    tradeFairs = await loadData(TRADE_FAIRS_KEY, false, []);
+  }
+  async function saveTradeFairs() {
+    await persistData(TRADE_FAIRS_KEY, tradeFairs, false);
+  }
+
+  async function loadShopCounter() {
+    const raw = await loadData(SHOP_COUNTER_KEY, false, {});
+    shopOrderCounters = (typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+  }
+  async function saveShopCounter() {
+    await persistData(SHOP_COUNTER_KEY, shopOrderCounters, false);
+  }
+  function getShopCounter() {
+    const fy = currentFY || computeDefaultFY();
+    return shopOrderCounters[fy] || 1;
+  }
+  function setShopCounter(val) {
+    const fy = currentFY || computeDefaultFY();
+    shopOrderCounters[fy] = val;
+  }
+
+  // ---------- Financial Year ----------
+  function computeDefaultFY() {
+    return computeFYFromDate(new Date());
+  }
+
+  function computeFYFromDate(dateOrIso) {
+    const d = (dateOrIso instanceof Date) ? dateOrIso : new Date(dateOrIso);
+    const y = d.getFullYear();
+    const m = d.getMonth(); // 0-indexed, 3 = April
+    const startYear = m >= 3 ? y : y - 1;
+    return `${startYear}-${String(startYear + 1).slice(2)}`;
+  }
+
+  function getEntryFY(e) {
+    return e.fy || computeFYFromDate(e.time);
+  }
+
+  async function loadFY() {
+    currentFY = await loadData(FY_STORAGE_KEY, false, computeDefaultFY());
+    renderFYBadge();
+  }
+
+  async function saveFY() {
+    await persistData(FY_STORAGE_KEY, currentFY, false);
+  }
+
+  function renderFYBadge() {
+    fyBadge.textContent = 'FY ' + (currentFY || computeDefaultFY());
+  }
+
+  function generateFYOptions() {
+    const defaultStart = parseInt(computeDefaultFY().split('-')[0], 10);
+    const options = [];
+    for (let y = defaultStart - 4; y <= defaultStart + 2; y++) {
+      options.push(`${y}-${String(y + 1).slice(2)}`);
+    }
+    return options;
+  }
+
+  function openFYPicker() {
+    const options = generateFYOptions();
+    fyOptionsWrap.innerHTML = options.map(fy =>
+      `<button class="btn-secondary btn-tiny fy-option-btn" data-fy="${fy}" style="${fy === currentFY ? 'background: var(--accent); color: white; border-color: var(--accent);' : ''}">FY ${fy}</button>`
+    ).join('');
+    fyOptionsWrap.querySelectorAll('.fy-option-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentFY = btn.getAttribute('data-fy');
+        saveFY();
+        renderFYBadge();
+        fyPickerOverlay.style.display = 'none';
+        if (entryScreen.style.display !== 'none') {
+          render();
+          if (currentChannel === 'shop') orderInput.value = String(getShopCounter());
+        }
+        if (tradeFairListScreen.style.display !== 'none') renderTradeFairList();
+        if (orderSearchInput.value.trim()) runOrderSearch();
+        showStatus(`✓ Switched to FY ${currentFY}`, false);
+      });
+    });
+    fyPickerOverlay.style.display = 'flex';
+  }
+
+  function formatFairDateRange(f) {
+    if (!f.startDate && !f.endDate) return '';
+    const opts = { day: '2-digit', month: 'short' };
+    const s = f.startDate ? new Date(f.startDate + 'T00:00:00').toLocaleDateString('en-IN', opts) : '';
+    const e = f.endDate ? new Date(f.endDate + 'T00:00:00').toLocaleDateString('en-IN', opts) : '';
+    if (s && e) return `${s} – ${e}`;
+    return s || e;
+  }
+
+  function renderTradeFairList() {
+    if (tradeFairs.length === 0) {
+      tradeFairListWrap.innerHTML = '<div class="empty-state">No trade fairs added yet. Tap "+ Add New Trade Fair" above.</div>';
+      return;
+    }
+    const sorted = [...tradeFairs].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    tradeFairListWrap.innerHTML = sorted.map(f => {
+      const count = entries.filter(e => e.channel === 'tradefair' && e.tradeFairId === f.id && (!currentFY || getEntryFY(e) === currentFY)).length;
+      const countLabel = count ? ` · ${count} order sheet${count > 1 ? 's' : ''} in FY ${currentFY}` : '';
+      const dateLabel = formatFairDateRange(f);
+      const isPendingDelete = pendingDeleteFairId === f.id;
+      return `<div class="fair-row" data-fair-id="${escapeHtml(f.id)}" style="cursor:default;">
+        <div data-fair-enter="${escapeHtml(f.id)}" style="cursor:pointer; flex:1;">
+          <div class="fair-row-title">${escapeHtml(f.name)}</div>
+          <div class="fair-row-sub">${escapeHtml(f.city || '')}${dateLabel ? ' · ' + dateLabel : ''}${countLabel}</div>
+        </div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          ${isPendingDelete
+            ? `<span style="font-size:12px; color:#b04a4a; font-weight:700;">Delete?</span>
+               <button class="btn-danger btn-tiny" style="background:#b04a4a; color:white;" data-confirm-delete-fair="${escapeHtml(f.id)}">Yes</button>
+               <button class="btn-secondary btn-tiny" data-cancel-delete-fair="${escapeHtml(f.id)}">Cancel</button>`
+            : `<button class="btn-secondary btn-tiny" data-edit-fair="${escapeHtml(f.id)}">Edit</button>
+               <button class="btn-danger btn-tiny" data-delete-fair="${escapeHtml(f.id)}">Delete</button>
+               <span style="color: var(--accent); font-size:18px;">›</span>`
+          }
+        </div>
+      </div>`;
+    }).join('');
+    tradeFairListWrap.querySelectorAll('[data-fair-enter]').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = el.getAttribute('data-fair-enter');
+        const fair = tradeFairs.find(f => f.id === id);
+        if (fair) enterTradeFair(fair);
+      });
+    });
+    tradeFairListWrap.querySelectorAll('[data-edit-fair]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const id = btn.getAttribute('data-edit-fair');
+        const fair = tradeFairs.find(f => f.id === id);
+        if (!fair) return;
+        editingFairId = id;
+        tradeFairFormTitle.textContent = 'Edit Trade Fair';
+        newFairName.value = fair.name || '';
+        newFairCity.value = fair.city || '';
+        newFairStartDate.value = fair.startDate || '';
+        newFairEndDate.value = fair.endDate || '';
+        createTradeFairBtn.textContent = 'Save Changes';
+        addTradeFairForm.style.display = 'block';
+        newFairName.focus();
+      });
+    });
+    tradeFairListWrap.querySelectorAll('[data-delete-fair]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        pendingDeleteFairId = btn.getAttribute('data-delete-fair');
+        renderTradeFairList();
+      });
+    });
+    tradeFairListWrap.querySelectorAll('[data-cancel-delete-fair]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        pendingDeleteFairId = null;
+        renderTradeFairList();
+      });
+    });
+    tradeFairListWrap.querySelectorAll('[data-confirm-delete-fair]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const id = btn.getAttribute('data-confirm-delete-fair');
+        tradeFairs = tradeFairs.filter(f => f.id !== id);
+        pendingDeleteFairId = null;
+        saveTradeFairs();
+        renderTradeFairList();
+        showStatus('✓ Trade fair deleted (its past orders are kept, just no longer listed here)', false);
+      });
+    });
+  }
+
+  function enterShop() {
+    currentChannel = 'shop';
+    currentTradeFair = null;
+    orderInput.value = String(getShopCounter());
+    showScreen('entry');
+    render();
+  }
+
+  function enterTradeFair(fair) {
+    currentChannel = 'tradefair';
+    currentTradeFair = fair;
+    orderInput.value = '';
+    showScreen('entry');
+    render();
+  }
+
+  function updateContextBar() {
+    if (currentChannel === 'shop') {
+      contextLabel.textContent = 'Shop';
+      orderSearchTitle.textContent = 'Search Old Orders (Shop)';
+    } else if (currentChannel === 'tradefair' && currentTradeFair) {
+      contextLabel.textContent = `Trade Fair: ${currentTradeFair.name} (${currentTradeFair.city || '—'})`;
+      orderSearchTitle.textContent = `Search Old Orders (${currentTradeFair.name})`;
+    }
+  }
+
+  // ---------- Scoping ----------
+  function matchesCurrentScope(e) {
+    const ch = e.channel || 'shop'; // legacy entries default to shop
+    if (currentFY && getEntryFY(e) !== currentFY) return false;
+    if (currentChannel === 'shop') return ch === 'shop';
+    if (currentChannel === 'tradefair') return ch === 'tradefair' && currentTradeFair && e.tradeFairId === currentTradeFair.id;
+    return false;
+  }
+  function getScopedEntries() {
+    return entries.filter(matchesCurrentScope);
+  }
+
+  let catalogUpdatedAt = null;
+
+  async function loadCatalog() {
+    const raw = await loadData(CATALOG_STORAGE_KEY, true, { catalog: [], updatedAt: null });
+    if (Array.isArray(raw)) {
+      catalog = raw;
+      catalogUpdatedAt = null;
+    } else {
+      catalog = raw.catalog || [];
+      catalogUpdatedAt = raw.updatedAt || null;
+    }
+    renderCatalogUI();
+  }
+
+  async function saveCatalog() {
+    catalogUpdatedAt = new Date().toISOString();
+    await persistData(CATALOG_STORAGE_KEY, { catalog, updatedAt: catalogUpdatedAt }, true);
+  }
+
+  function formatUpdatedAt(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) +
+      ', ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function renderCatalogUI() {
+    catalogCount.textContent = `${catalog.length} design${catalog.length === 1 ? '' : 's'}`;
+    const updatedLine = catalogUpdatedAt ? `Last updated: ${formatUpdatedAt(catalogUpdatedAt)}` : '';
+    catalogSummary.textContent = catalog.length > 0
+      ? updatedLine
+      : 'No catalog uploaded yet';
+  }
+
+  function getFieldFromRow(row, ...candidates) {
+    const normalized = {};
+    Object.keys(row).forEach(k => { normalized[k.trim().toLowerCase()] = row[k]; });
+    for (const c of candidates) {
+      const v = normalized[c.toLowerCase()];
+      if (v !== undefined && v !== '') return v;
+    }
+    return '';
+  }
+
+  function sheetToObjectsAutoHeader(sheet, headerHints) {
+    const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    let headerRowIdx = 0;
+    const hintsLower = headerHints.map(h => h.toLowerCase());
+    for (let i = 0; i < Math.min(raw.length, 20); i++) {
+      const rowVals = (raw[i] || []).map(v => String(v).trim().toLowerCase());
+      if (hintsLower.some(h => rowVals.includes(h))) {
+        headerRowIdx = i;
+        break;
+      }
+    }
+    const headers = (raw[headerRowIdx] || []).map(h => String(h).trim());
+    const objects = [];
+    for (let i = headerRowIdx + 1; i < raw.length; i++) {
+      const rowArr = raw[i] || [];
+      if (rowArr.every(v => v === '' || v === undefined || v === null)) continue;
+      const obj = {};
+      headers.forEach((h, idx) => { if (h) obj[h] = rowArr[idx] !== undefined ? rowArr[idx] : ''; });
+      objects.push(obj);
+    }
+    return objects;
+  }
+
+  function handleCatalogUpload(file) {
+    if (typeof XLSX === 'undefined') {
+      showStatus('⚠️ Excel library still loading — try again in a moment', true);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type: 'array' });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const rows = sheetToObjectsAutoHeader(sheet, ['design number', 'design no', 'design no.', 'design']);
+        const parsed = [];
+        let skipped = 0;
+        rows.forEach(r => {
+          const design = getFieldFromRow(r, 'Design Number', 'Design No', 'Design No.', 'Design').toString().trim();
+          const qr = getFieldFromRow(r, 'Design Id', 'Design ID', 'QR Code', 'QR', 'Barcode').toString().trim();
+          const priceRaw = getFieldFromRow(r, 'Sales Price', 'Price', 'Rate', 'Sales Rate', 'Selling Price', 'MRP');
+          const price = parseFloat(priceRaw) || 0;
+          if (!design) { skipped++; return; }
+          parsed.push({ design, qr, price });
+        });
+        if (parsed.length === 0) {
+          showStatus('⚠️ No valid rows found — check for a "Design Number" column', true);
+          return;
+        }
+        catalog = parsed;
+        saveCatalog();
+        renderCatalogUI();
+        const withPrice = parsed.filter(p => p.price > 0).length;
+        catalogSummary.textContent = `Imported ${parsed.length} designs${skipped ? `, ${skipped} skipped (no design number)` : ''}. ${withPrice} of them have a price detected${withPrice < parsed.length ? ' — check your price column header if this looks low' : ''}. Last updated: ${formatUpdatedAt(catalogUpdatedAt)}.`;
+        showStatus(`✓ Catalog updated: ${parsed.length} designs`, false);
+      } catch (err) {
+        showStatus('⚠️ Could not read that file — make sure it\'s a valid Excel export', true);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  // ---------- Customer Database ----------
+  async function loadCustomerDB() {
+    const raw = await loadData(CUSTOMER_DB_KEY, true, { customers: [], updatedAt: null });
+    customerDB = raw.customers || [];
+    customerDBUpdatedAt = raw.updatedAt || null;
+    renderCustomerDBUI();
+  }
+
+  async function saveCustomerDB() {
+    customerDBUpdatedAt = new Date().toISOString();
+    await persistData(CUSTOMER_DB_KEY, { customers: customerDB, updatedAt: customerDBUpdatedAt }, true);
+  }
+
+  function renderCustomerDBUI() {
+    customerDBCount.textContent = `${customerDB.length} customer${customerDB.length === 1 ? '' : 's'}`;
+    customerDBSummary.textContent = customerDB.length > 0
+      ? (customerDBUpdatedAt ? `Last updated: ${formatUpdatedAt(customerDBUpdatedAt)}` : '')
+      : 'No customer list uploaded yet';
+  }
+
+  function handleCustomerDBUpload(file) {
+    if (typeof XLSX === 'undefined') {
+      showStatus('⚠️ Excel library still loading — try again in a moment', true);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type: 'array' });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const rows = sheetToObjectsAutoHeader(sheet, ['party_name', 'party name', 'customer name']);
+        const parsed = [];
+        let skipped = 0;
+        rows.forEach((r, idx) => {
+          const name = getFieldFromRow(r, 'Party_Name', 'Party Name', 'Customer Name', 'Name', 'M/s.', 'Ms').toString().trim();
+          const gst = getFieldFromRow(r, 'gst', 'GST', 'GSTIN', 'GST No', 'GST Number').toString().trim();
+          const mobile = getFieldFromRow(r, 'mobile', 'Mobile', 'Mo.', 'Phone', 'Contact', 'Mobile No').toString().trim();
+          const state = getFieldFromRow(r, 'State_Name', 'State').toString().trim();
+          const city = getFieldFromRow(r, 'City_Name', 'City').toString().trim();
+          let transport = getFieldFromRow(r, 'Transport', 'transport', 'Transport Name', 'TransportName').toString().trim();
+          if (!transport) {
+            const keys = Object.keys(r);
+            if (keys[11] !== undefined) transport = String(r[keys[11]] || '').trim();
+          }
+          if (!name) { skipped++; return; }
+          parsed.push({ name, gst, mobile, state, city, transport });
+        });
+        if (parsed.length === 0) {
+          showStatus('⚠️ No valid rows found — check for a "Party Name" column', true);
+          return;
+        }
+        customerDB = parsed;
+        saveCustomerDB();
+        renderCustomerDBUI();
+        customerDBSummary.textContent = `Imported ${parsed.length} customers${skipped ? `, ${skipped} skipped (no name)` : ''}. Last updated: ${formatUpdatedAt(customerDBUpdatedAt)}.`;
+        showStatus(`✓ Customer database updated: ${parsed.length} customers`, false);
+      } catch (err) {
+        showStatus('⚠️ Could not read that file — make sure it\'s a valid Excel export', true);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function showCustNameSuggestions(query) {
+    const q = query.trim().toLowerCase();
+    if (!q || customerDB.length === 0) {
+      custNameSuggestions.style.display = 'none';
+      custNameSuggestions.innerHTML = '';
+      return;
+    }
+    const matches = customerDB.filter(c => c.name.toLowerCase().includes(q)).slice(0, 8);
+    if (matches.length === 0) {
+      custNameSuggestions.style.display = 'none';
+      custNameSuggestions.innerHTML = '';
+      return;
+    }
+    custNameSuggestions.innerHTML = matches.map((c, i) => `
+      <div class="cust-suggestion-item" data-cust-idx="${i}" style="padding:8px 12px; cursor:pointer; border-bottom:1px solid var(--line); font-size:13px;">
+        <div style="font-weight:600;">${escapeHtml(c.name)}</div>
+        <div style="font-size:11px; color: var(--muted);">${[c.city, c.state].filter(Boolean).map(escapeHtml).join(', ')}${c.mobile ? ' · ' + escapeHtml(c.mobile) : ''}</div>
+      </div>`).join('');
+    custNameSuggestions.querySelectorAll('.cust-suggestion-item').forEach((item, i) => {
+      item.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const c = matches[i];
+        document.getElementById('p-custName').value = c.name;
+        document.getElementById('p-custPhone').value = c.mobile || '';
+        document.getElementById('p-gstin').value = c.gst || '';
+        document.getElementById('p-state').value = c.state || '';
+        document.getElementById('p-city').value = c.city || '';
+        document.getElementById('p-transport').value = c.transport || '';
+        custNameSuggestions.style.display = 'none';
+        custNameSuggestions.innerHTML = '';
+      });
+    });
+    custNameSuggestions.style.display = 'block';
+  }
+
+  function lookupPrice(design) {
+    const d = catalog.find(c => c.design && c.design.toLowerCase() === design.trim().toLowerCase());
+    return (d && d.price) ? d.price : 0;
+  }
+
+  function findDesignForScannedCode(scanned) {
+    const s = scanned.trim().toLowerCase();
+    if (!s) return null;
+    const byQr = catalog.find(d => d.qr && d.qr.toLowerCase() === s);
+    if (byQr) return byQr.design;
+    const byDesign = catalog.find(d => d.design && d.design.toLowerCase() === s);
+    if (byDesign) return byDesign.design;
+    return null;
+  }
+
+  function addScannedDesignToForm(design) {
+    const rows = designRows.querySelectorAll('.design-row');
+    let targetRow = null;
+    for (const row of rows) {
+      const dField = row.querySelector('.design-field');
+      if (dField.value.trim().toLowerCase() === design.toLowerCase()) { targetRow = row; break; }
+    }
+    if (targetRow) {
+      const sField = targetRow.querySelector('.sets-field');
+      const current = parseInt(sField.value, 10) || 0;
+      sField.value = current + 1;
+      if (targetRow._updatePriceDisplay) targetRow._updatePriceDisplay();
+      showStatus(`✓ ${design}: now ${current + 1} sets`, false);
+      return;
+    }
+    for (const row of rows) {
+      const dField = row.querySelector('.design-field');
+      if (!dField.value.trim()) { targetRow = row; break; }
+    }
+    if (targetRow) {
+      const dField = targetRow.querySelector('.design-field');
+      dField.value = design;
+      if (targetRow._updatePriceDisplay) targetRow._updatePriceDisplay();
+      showStatus(`✓ Added: ${design} (1 set)`, false);
+      return;
+    }
+    addDesignRow(false);
+    const newRows = designRows.querySelectorAll('.design-row');
+    const newRow = newRows[newRows.length - 1];
+    const newDField = newRow.querySelector('.design-field');
+    newDField.value = design;
+    if (newRow._updatePriceDisplay) newRow._updatePriceDisplay();
+    showStatus(`✓ Added: ${design} (1 set)`, false);
+  }
+
+  function handleScanCode(scanned) {
+    if (!scanned || !scanned.trim()) return;
+    if (catalog.length === 0) {
+      showStatus('⚠️ Upload your design catalog first so scans can be matched', true);
+      return;
+    }
+    const design = findDesignForScannedCode(scanned);
+    if (!design) {
+      showStatus(`⚠️ Unknown code: ${scanned}`, true);
+      return;
+    }
+    addScannedDesignToForm(design);
+  }
+
+  let html5QrCode = null;
+  let cameraActive = false;
+  function toggleCameraScan() {
+    const box = document.getElementById('qr-reader');
+    if (cameraActive) {
+      if (html5QrCode) { html5QrCode.stop().catch(() => {}); }
+      box.classList.remove('active');
+      cameraToggleBtn.textContent = '📷 Scan with Camera';
+      cameraActive = false;
+      return;
+    }
+    if (typeof Html5Qrcode === 'undefined') {
+      showStatus('⚠️ Camera scanner still loading — try again in a moment', true);
+      return;
+    }
+    box.classList.add('active');
+    cameraToggleBtn.textContent = '✕ Stop Camera';
+    cameraActive = true;
+    html5QrCode = new Html5Qrcode('qr-reader');
+    html5QrCode.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: 240 },
+      (decodedText) => { handleScanCode(decodedText); },
+      () => { /* ignore per-frame no-match noise */ }
+    ).catch(err => {
+      showStatus('⚠️ Could not start camera — check browser camera permission', true);
+      cameraActive = false;
+      box.classList.remove('active');
+      cameraToggleBtn.textContent = '📷 Scan with Camera';
+    });
+  }
+
+  async function saveEntries() {
+    await persistData(STORAGE_KEY, entries, false);
+  }
+
+  function showStatus(msg, isWarning) {
+    statusMsg.textContent = msg;
+    statusMsg.style.color = isWarning ? '#b04a4a' : 'var(--good)';
+    setTimeout(() => { statusMsg.textContent = ''; }, 2200);
+  }
+
+  function computeTotals() {
+    const map = {};
+    getScopedEntries().forEach(e => {
+      if (!map[e.design]) map[e.design] = { design: e.design, totalSets: 0, totalPcs: 0, orderCount: 0 };
+      map[e.design].totalSets += e.sets;
+      map[e.design].totalPcs += (e.pcs || 0);
+      map[e.design].orderCount += 1;
+    });
+    const list = Object.values(map);
+    list.forEach(t => { t.price = lookupPrice(t.design); });
+    if (totalsSortMode === 'az') {
+      list.sort((a, b) => a.design.localeCompare(b.design, undefined, { numeric: true, sensitivity: 'base' }));
+    } else if (totalsSortMode === 'sets') {
+      list.sort((a, b) => b.totalSets - a.totalSets || b.orderCount - a.orderCount);
+    } else {
+      list.sort((a, b) => b.orderCount - a.orderCount || b.totalSets - a.totalSets);
+    }
+    return list;
+  }
+
+  function getOrderGroups() {
+    const map = {};
+    const order = [];
+    getScopedEntries().forEach(e => {
+      const key = (e.order && e.order.trim()) ? e.order.trim() : ('__none__' + e.id);
+      if (!map[key]) {
+        map[key] = { key, label: (e.order && e.order.trim()) ? e.order.trim() : '(no order #)', items: [], latestTime: e.time };
+        order.push(key);
+      }
+      map[key].items.push(e);
+      if (e.time > map[key].latestTime) map[key].latestTime = e.time;
+    });
+    return order.map(k => map[k]).sort((a, b) => (a.latestTime < b.latestTime ? 1 : -1));
+  }
+
+  function computeSheetCount() {
+    const orderKeys = new Set();
+    let noOrderCount = 0;
+    getScopedEntries().forEach(e => {
+      const key = (e.order || '').trim();
+      if (key) orderKeys.add(key.toLowerCase());
+      else noOrderCount++;
+    });
+    return orderKeys.size + noOrderCount;
+  }
+
+  function partySummaryHtml(party) {
+    if (isPartyDetailsEmpty(party)) return '';
+    const rows = [
+      ['Party', party.custName], ['Mo.', party.custPhone], ['Haste', party.haste],
+      ['Agent', party.agent], ['GSTIN', party.gstin], ['State', party.state], ['City', party.city],
+      ['Consignee', party.consignee], ['Transport', party.transport], ['Station', party.station],
+      ['Export To', party.expo], ['Remarks', party.remarks]
+    ].filter(([label, val]) => val);
+    if (rows.length === 0) return '';
+    return `<div style="font-size:12px; color: var(--muted); margin-bottom:10px; padding:8px 10px; background: var(--bg); border-radius:6px; line-height:1.8;">
+      ${rows.map(([label, val]) => `<span style="margin-right:14px;"><b>${label}:</b> ${escapeHtml(val)}</span>`).join('')}
+    </div>`;
+  }
+
+  function renderOrderReadOnly(g) {
+    const isPendingDelete = pendingDeleteKey === g.key;
+    return `<div class="order-detail-panel" data-panel-key="${escapeHtml(g.key)}">
+      <div class="order-detail-header">
+        <strong>Order: ${escapeHtml(g.label)}</strong>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button class="btn-secondary btn-tiny" data-print-order="${escapeHtml(g.key)}">🖨️ Print</button>
+          <button class="btn-secondary btn-tiny" data-edit-order="${escapeHtml(g.key)}">Edit Order</button>
+          ${isPendingDelete
+            ? `<span style="font-size:12px; color:#b04a4a; font-weight:700;">Delete this order?</span>
+               <button class="btn-danger btn-tiny" style="background:#b04a4a; color:white;" data-confirm-delete-order="${escapeHtml(g.key)}">Yes, Delete</button>
+               <button class="btn-secondary btn-tiny" data-cancel-delete-order="${escapeHtml(g.key)}">Cancel</button>`
+            : `<button class="btn-danger btn-tiny" data-delete-order="${escapeHtml(g.key)}">Delete Entire Order</button>`
+          }
+          <button class="btn-secondary btn-tiny" data-share-order="${escapeHtml(g.key)}">📱 Share</button>
+        </div>
+      </div>
+      ${partySummaryHtml(g.items[0].party)}
+      ${g.items[0].packing ? `<div style="font-size:12px; color: var(--accent); font-weight:600; margin-bottom:8px;">📦 Packing: ${escapeHtml(g.items[0].packing)}</div>` : ''}
+      ${g.items.map(item => `<div class="order-detail-line">
+        <div class="dline-design">${escapeHtml(item.design)}</div>
+        <div class="dline-sets">${item.sets} sets${(item.pcs && item.pcs > 0) ? ', ' + item.pcs + ' pcs' : ''}${(item.price && item.price > 0) ? ' · ₹' + item.price.toLocaleString('en-IN') + '/unit' : ''}</div>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  function renderOrderEditForm(g) {
+    let html = `<div class="order-detail-panel" data-panel-key="${escapeHtml(g.key)}">
+      <div class="order-detail-header"><strong>Editing Order</strong></div>
+      <div class="field" style="max-width:220px; margin-bottom:10px;">
+        <label>Order Number</label>
+        <input type="text" id="editOrderNumberInput" value="${escapeHtml(editingOrderNumber)}">
+      </div>
+      <div class="field" style="max-width:260px; margin-bottom:10px;">
+        <label>Packing</label>
+        <select id="editPackingInput">
+          <option value="" ${!editingPacking ? 'selected' : ''}>— None —</option>
+          <option value="Thaili Pack" ${editingPacking === 'Thaili Pack' ? 'selected' : ''}>Thaili Pack</option>
+          <option value="Pouch Pack" ${editingPacking === 'Pouch Pack' ? 'selected' : ''}>Pouch Pack</option>
+          <option value="Box Pack" ${editingPacking === 'Box Pack' ? 'selected' : ''}>Box Pack</option>
+          <option value="Thaili + Pouch (Stitch Blouse)" ${editingPacking === 'Thaili + Pouch (Stitch Blouse)' ? 'selected' : ''}>Thaili + Pouch (Stitch Blouse)</option>
+        </select>
+      </div>
+      <details style="margin-bottom:10px;">
+        <summary style="cursor:pointer; font-weight:600; font-size:13px; color: var(--muted);">Party Details</summary>
+        <div style="margin-top:10px;">
+          <div class="entry-row">
+            <div class="field"><label>M/s. (Party Name)</label><input type="text" id="editP-custName" value="${escapeHtml(editingParty.custName || '')}"></div>
+            <div class="field"><label>Mo.</label><input type="text" id="editP-custPhone" value="${escapeHtml(editingParty.custPhone || '')}"></div>
+          </div>
+          <div class="entry-row" style="margin-top:10px;">
+            <div class="field"><label>Haste</label><input type="text" id="editP-haste" value="${escapeHtml(editingParty.haste || '')}"></div>
+            <div class="field"><label>Agent</label><input type="text" id="editP-agent" value="${escapeHtml(editingParty.agent || '')}"></div>
+            <div class="field"><label>Party GSTIN</label><input type="text" id="editP-gstin" value="${escapeHtml(editingParty.gstin || '')}"></div>
+          </div>
+          <div class="entry-row" style="margin-top:10px;">
+            <div class="field"><label>State</label><input type="text" id="editP-state" value="${escapeHtml(editingParty.state || '')}"></div>
+            <div class="field"><label>City</label><input type="text" id="editP-city" value="${escapeHtml(editingParty.city || '')}"></div>
+          </div>
+          <div class="entry-row" style="margin-top:10px;">
+            <div class="field"><label>Consignee</label><input type="text" id="editP-consignee" value="${escapeHtml(editingParty.consignee || '')}"></div>
+            <div class="field"><label>Transport</label><input type="text" id="editP-transport" value="${escapeHtml(editingParty.transport || '')}"></div>
+            <div class="field"><label>Station</label><input type="text" id="editP-station" value="${escapeHtml(editingParty.station || '')}"></div>
+          </div>
+          <div class="entry-row" style="margin-top:10px;">
+            <div class="field"><label>Export To</label><input type="text" id="editP-expo" value="${escapeHtml(editingParty.expo || '')}"></div>
+            <div class="field"><label>Remarks</label><input type="text" id="editP-remarks" value="${escapeHtml(editingParty.remarks || '')}"></div>
+          </div>
+        </div>
+      </details>
+      <div id="editRowsWrap">`;
+    editingRows.forEach((row, idx) => {
+      html += `<div class="order-detail-line" data-edit-row-idx="${idx}">
+        <input type="text" class="edit-row-design" value="${escapeHtml(row.design)}" placeholder="Design number" style="flex:1;">
+        <input type="number" class="edit-row-sets" min="0" value="${row.sets}" style="width:60px;" title="Sets">
+        <input type="number" class="edit-row-pcs" min="0" value="${row.pcs || 0}" style="width:60px;" title="Pcs">
+        <button class="btn-secondary btn-tiny" data-remove-edit-row="${idx}">Remove</button>
+      </div>`;
+    });
+    html += `</div>
+      <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+        <button class="btn-secondary btn-tiny" id="addEditRowBtn">+ Add Design</button>
+        <button class="btn-add btn-tiny" id="saveOrderEditBtn">Save Changes</button>
+        <button class="btn-secondary btn-tiny" id="cancelOrderEditBtn">Cancel</button>
+      </div>
+    </div>`;
+    return html;
+  }
+
+  function syncEditRowsFromDOM() {
+    document.querySelectorAll('[data-edit-row-idx]').forEach(rowEl => {
+      const idx = parseInt(rowEl.getAttribute('data-edit-row-idx'), 10);
+      const d = rowEl.querySelector('.edit-row-design').value.trim();
+      const sVal = rowEl.querySelector('.edit-row-sets').value;
+      const pVal = rowEl.querySelector('.edit-row-pcs').value;
+      const s = parseInt(sVal, 10);
+      const p = parseInt(pVal, 10);
+      if (editingRows[idx]) {
+        editingRows[idx].design = d;
+        editingRows[idx].sets = isNaN(s) ? 0 : s;
+        editingRows[idx].pcs = isNaN(p) ? 0 : p;
+      }
+    });
+    const orderInputEl = document.getElementById('editOrderNumberInput');
+    if (orderInputEl) editingOrderNumber = orderInputEl.value.trim();
+    const packingEl = document.getElementById('editPackingInput');
+    if (packingEl) editingPacking = packingEl.value;
+    const custNameEl = document.getElementById('editP-custName');
+    if (custNameEl) {
+      editingParty = {
+        custName: custNameEl.value.trim(),
+        custPhone: document.getElementById('editP-custPhone').value.trim(),
+        haste: document.getElementById('editP-haste').value.trim(),
+        agent: document.getElementById('editP-agent').value.trim(),
+        gstin: document.getElementById('editP-gstin').value.trim(),
+        state: document.getElementById('editP-state').value.trim(),
+        city: document.getElementById('editP-city').value.trim(),
+        consignee: document.getElementById('editP-consignee').value.trim(),
+        transport: document.getElementById('editP-transport').value.trim(),
+        station: document.getElementById('editP-station').value.trim(),
+        expo: document.getElementById('editP-expo').value.trim(),
+        remarks: document.getElementById('editP-remarks').value.trim()
+      };
+    }
+  }
+
+  function render() {
+    const totals = computeTotals();
+    statOrders.textContent = computeSheetCount();
+    statDesigns.textContent = totals.length;
+    statSets.textContent = getScopedEntries().reduce((s, e) => s + e.sets, 0);
+    statPcs.textContent = getScopedEntries().reduce((s, e) => s + (e.pcs || 0), 0);
+
+    if (totals.length === 0) {
+      totalsTableWrap.innerHTML = '<div class="empty-state">No orders entered yet. Add your first one above.</div>';
+      showAllWrap.innerHTML = '';
+    } else {
+      const visibleTotals = totalsShowAll ? totals : totals.slice(0, 5);
+      let html = '<table><thead><tr><th>Design</th><th class="num">Times Ordered</th><th class="num">Total Sets</th><th class="num">Total Pcs</th><th class="num">Price</th></tr></thead><tbody>';
+      visibleTotals.forEach((t, i) => {
+        html += `<tr><td><span class="rank-badge">${i + 1}</span>${escapeHtml(t.design)}</td><td class="num">${t.orderCount}</td><td class="num">${t.totalSets}</td><td class="num">${t.totalPcs}</td><td class="num">${t.price > 0 ? '₹' + t.price.toLocaleString('en-IN') : '—'}</td></tr>`;
+      });
+      html += '</tbody></table>';
+      totalsTableWrap.innerHTML = html;
+
+      if (totals.length > 5) {
+        showAllWrap.innerHTML = `<button class="btn-secondary" id="toggleShowAllBtn">${totalsShowAll ? 'Show Top 5' : `Show All (${totals.length})`}</button>`;
+        document.getElementById('toggleShowAllBtn').addEventListener('click', () => {
+          totalsShowAll = !totalsShowAll;
+          render();
+        });
+      } else {
+        showAllWrap.innerHTML = '';
+      }
+    }
+
+    const groups = getOrderGroups();
+    if (groups.length === 0) {
+      recentListWrap.innerHTML = '<div class="empty-state">Nothing entered yet.</div>';
+    } else {
+      recentListWrap.innerHTML = buildOrderGroupsHtml(groups);
+      wireOrderPanelEvents(recentListWrap, groups, () => { render(); });
+    }
+
+    exportBtn.disabled = entries.length === 0;
+    printBtn.disabled = entries.length === 0;
+    clearBtn.disabled = entries.length === 0;
+  }
+
+  function groupToSavedOrder(g) {
+    return { order: (g.label === '(no order #)') ? '' : g.label, party: g.items[0].party || {}, items: g.items };
+  }
+
+  function buildOrderGroupsHtml(groups) {
+    let html = '';
+    groups.forEach(g => {
+      const totalSets = g.items.reduce((s, e) => s + e.sets, 0);
+      const totalPcs = g.items.reduce((s, e) => s + (e.pcs || 0), 0);
+      const isExpanded = expandedOrders.has(g.key);
+      html += `<div class="order-row" data-order-key="${escapeHtml(g.key)}">
+        <div class="order-row-left">
+          <div class="order-row-title">${escapeHtml(g.label)}</div>
+          <div class="order-row-sub">${g.items.length} design${g.items.length > 1 ? 's' : ''}</div>
+        </div>
+        <div class="order-row-right">${totalSets} sets${totalPcs > 0 ? ', ' + totalPcs + ' pcs' : ''}</div>
+      </div>`;
+      if (isExpanded) {
+        html += (editingOrderKey === g.key) ? renderOrderEditForm(g) : renderOrderReadOnly(g);
+      }
+    });
+    return html;
+  }
+
+  function wireOrderPanelEvents(container, groups, afterMutate) {
+    container.querySelectorAll('.order-row').forEach(rowEl => {
+      rowEl.addEventListener('click', () => {
+        const key = rowEl.getAttribute('data-order-key');
+        const wasExpanded = expandedOrders.has(key);
+        if (wasExpanded) {
+          expandedOrders.delete(key);
+          if (editingOrderKey === key) { editingOrderKey = null; editingRows = []; editingParty = {}; }
+          if (pendingDeleteKey === key) { pendingDeleteKey = null; }
+        } else {
+          expandedOrders.add(key);
+        }
+        afterMutate(!wasExpanded ? key : null);
+      });
+    });
+    container.querySelectorAll('[data-print-order]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const key = btn.getAttribute('data-print-order');
+        const g = groups.find(gr => gr.key === key);
+        if (g) printOrderForm(groupToSavedOrder(g));
+      });
+    });
+    container.querySelectorAll('[data-share-order]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const key = btn.getAttribute('data-share-order');
+        const g = groups.find(gr => gr.key === key);
+        if (g) {
+          lastSavedOrder = groupToSavedOrder(g);
+          openPostSaveModal();
+        }
+      });
+    });
+    container.querySelectorAll('[data-delete-order]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        pendingDeleteKey = btn.getAttribute('data-delete-order');
+        afterMutate(null);
+      });
+    });
+    container.querySelectorAll('[data-confirm-delete-order]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const key = btn.getAttribute('data-confirm-delete-order');
+        entries = entries.filter(en => {
+          const k = (en.order && en.order.trim()) ? en.order.trim() : ('__none__' + en.id);
+          return k !== key;
+        });
+        expandedOrders.delete(key);
+        pendingDeleteKey = null;
+        saveEntries();
+        afterMutate(null);
+        showStatus('✓ Order deleted', false);
+      });
+    });
+    container.querySelectorAll('[data-cancel-delete-order]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        pendingDeleteKey = null;
+        afterMutate(null);
+      });
+    });
+    container.querySelectorAll('[data-edit-order]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const key = btn.getAttribute('data-edit-order');
+        const g = groups.find(gr => gr.key === key);
+        if (!g) return;
+        editingOrderKey = key;
+        editingOrderNumber = (g.label === '(no order #)') ? '' : g.label;
+        editingRows = g.items.map(it => ({ id: it.id, design: it.design, sets: it.sets, pcs: it.pcs || 0 }));
+        editingParty = g.items[0].party || {};
+        editingPacking = g.items[0].packing || '';
+        afterMutate(null);
+      });
+    });
+    const editPanel = container.querySelector('[id="editOrderNumberInput"]');
+    if (editPanel) {
+      container.querySelector('#addEditRowBtn').addEventListener('click', e => {
+        e.stopPropagation();
+        syncEditRowsFromDOM();
+        editingRows.push({ id: 'new-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5), design: '', sets: 1, pcs: 0 });
+        afterMutate(null);
+      });
+      container.querySelectorAll('[data-remove-edit-row]').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          syncEditRowsFromDOM();
+          const idx = parseInt(btn.getAttribute('data-remove-edit-row'), 10);
+          if (editingRows.length > 1) editingRows.splice(idx, 1);
+          afterMutate(null);
+        });
+      });
+      container.querySelector('#cancelOrderEditBtn').addEventListener('click', e => {
+        e.stopPropagation();
+        editingOrderKey = null;
+        editingRows = [];
+        editingParty = {};
+        editingPacking = '';
+        afterMutate(null);
+      });
+      container.querySelector('#saveOrderEditBtn').addEventListener('click', e => {
+        e.stopPropagation();
+        syncEditRowsFromDOM();
+        const validRows = editingRows.filter(r => r.design && ((r.sets && r.sets > 0) || (r.pcs && r.pcs > 0)));
+        if (validRows.length === 0) {
+          showStatus('⚠️ Add at least one complete design line', true);
+          return;
+        }
+        const oldKey = editingOrderKey;
+        const now = new Date().toISOString();
+        entries = entries.filter(en => {
+          const k = (en.order && en.order.trim()) ? en.order.trim() : ('__none__' + en.id);
+          return k !== oldKey;
+        });
+        validRows.forEach(r => {
+          entries.unshift({
+            id: (r.id && !String(r.id).startsWith('new-')) ? r.id : (Date.now() + '-' + Math.random().toString(36).slice(2, 7)),
+            order: editingOrderNumber,
+            design: r.design,
+            sets: r.sets || 0,
+            pcs: r.pcs || 0,
+            price: lookupPrice(r.design),
+            party: editingParty,
+            packing: editingPacking,
+            channel: currentChannel,
+            fy: currentFY,
+            tradeFairId: currentTradeFair ? currentTradeFair.id : null,
+            tradeFairName: currentTradeFair ? currentTradeFair.name : null,
+            tradeFairCity: currentTradeFair ? currentTradeFair.city : null,
+            time: now
+          });
+        });
+        const newKey = editingOrderNumber ? editingOrderNumber : ('__none__' + validRows[0].id);
+        expandedOrders.delete(oldKey);
+        expandedOrders.add(newKey);
+        editingOrderKey = null;
+        editingRows = [];
+        editingParty = {};
+        editingPacking = '';
+        saveEntries();
+        afterMutate(null);
+        showStatus('✓ Order updated', false);
+      });
+    }
+  }
+
+  let rowCounter = 0;
+
+  function addDesignRow(focus) {
+    rowCounter++;
+    const rowId = 'row-' + rowCounter;
+    const row = document.createElement('div');
+    row.className = 'design-row';
+    row.setAttribute('data-row-id', rowId);
+    row.innerHTML = `
+      <div class="field">
+        <label>Design Number</label>
+        <input type="text" class="design-field" placeholder="e.g. D-104">
+      </div>
+      <div class="field" style="max-width: 100px;">
+        <label>Sets</label>
+        <input type="number" class="sets-field" min="0" value="1">
+      </div>
+      <div class="field" style="max-width: 100px;">
+        <label>Pcs</label>
+        <input type="number" class="pcs-field" min="0" value="0">
+      </div>
+      <div class="field" style="max-width: 100px;">
+        <label>Price</label>
+        <div class="price-display">—</div>
+      </div>
+      <button class="btn-remove-row" data-remove="${rowId}">Remove</button>
+    `;
+    designRows.appendChild(row);
+    const removeBtn = row.querySelector('[data-remove]');
+    removeBtn.addEventListener('click', () => {
+      if (designRows.children.length > 1) row.remove();
+    });
+    const dField = row.querySelector('.design-field');
+    const sField = row.querySelector('.sets-field');
+    const pField = row.querySelector('.pcs-field');
+    const priceDisplay = row.querySelector('.price-display');
+    function updatePriceDisplay() {
+      const design = dField.value.trim();
+      if (!design) { priceDisplay.textContent = '—'; return; }
+      const price = lookupPrice(design);
+      priceDisplay.textContent = price > 0 ? '₹' + price.toLocaleString('en-IN') : '—';
+    }
+    dField.addEventListener('input', updatePriceDisplay);
+    row._updatePriceDisplay = updatePriceDisplay;
+    dField.addEventListener('blur', updatePriceDisplay);
+    sField.addEventListener('focus', () => { sField.select(); });
+    pField.addEventListener('focus', () => { pField.select(); });
+    let dEmptyEnterCount = 0;
+    let pEmptyEnterCount = 0;
+    dField.addEventListener('input', () => { dEmptyEnterCount = 0; });
+    pField.addEventListener('input', () => { pEmptyEnterCount = 0; });
+
+    function rowIsComplete() {
+      const setCount = parseInt(sField.value, 10) || 0;
+      const pcsCount = parseInt(pField.value, 10) || 0;
+      return dField.value.trim() && (setCount > 0 || pcsCount > 0);
+    }
+
+    dField.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        if (!dField.value.trim()) {
+          dEmptyEnterCount++;
+          if (dEmptyEnterCount >= 3) {
+            dEmptyEnterCount = 0;
+            handleSaveOrderClick();
+            return;
+          }
+          showStatus(`⚠️ Enter a design number first (press Enter ${3 - dEmptyEnterCount} more time${3 - dEmptyEnterCount === 1 ? '' : 's'} on empty to save order anyway)`, true);
+          return;
+        }
+        dEmptyEnterCount = 0;
+        sField.focus();
+      }
+    });
+    sField.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { pField.focus(); }
+    });
+    pField.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        if (!rowIsComplete()) {
+          pEmptyEnterCount++;
+          if (pEmptyEnterCount >= 3) {
+            pEmptyEnterCount = 0;
+            handleSaveOrderClick();
+            return;
+          }
+          showStatus(`⚠️ Enter a design number and either sets or pcs (press Enter ${3 - pEmptyEnterCount} more time${3 - pEmptyEnterCount === 1 ? '' : 's'} on empty to save order anyway)`, true);
+          return;
+        }
+        pEmptyEnterCount = 0;
+        const rows = designRows.querySelectorAll('.design-row');
+        const isLast = rows[rows.length - 1] === row;
+        if (isLast) {
+          addDesignRow(true);
+        } else {
+          const idx = Array.prototype.indexOf.call(rows, row);
+          const nextRow = rows[idx + 1];
+          if (nextRow) {
+            const nextDesignField = nextRow.querySelector('.design-field');
+            if (nextDesignField) nextDesignField.focus();
+          }
+        }
+      }
+    });
+    if (focus) dField.focus();
+  }
+
+  function resetForm() {
+    orderInput.value = (currentChannel === 'shop') ? String(getShopCounter()) : '';
+    designRows.innerHTML = '';
+    clearPartyDetailsForm();
+    addDesignRow(false);
+    orderInput.focus();
+  }
+
+  let pendingSaveData = null;
+
+  function handleSaveOrderClick() {
+    const oNum = orderInput.value.trim();
+    if (!oNum) {
+      showStatus('⚠️ Order Number is required before saving', true);
+      orderInput.focus();
+      return;
+    }
+    const rows = designRows.querySelectorAll('.design-row');
+    const toAdd = [];
+    rows.forEach(row => {
+      const dNum = row.querySelector('.design-field').value.trim();
+      const setCount = parseInt(row.querySelector('.sets-field').value, 10) || 0;
+      const pcsCount = parseInt(row.querySelector('.pcs-field').value, 10) || 0;
+      if (!dNum || (setCount <= 0 && pcsCount <= 0)) return; // skip empty/incomplete rows
+      toAdd.push({ design: dNum, sets: setCount, pcs: pcsCount });
+    });
+    if (toAdd.length === 0) {
+      showStatus('⚠️ Add at least one complete design line before saving', true);
+      return;
+    }
+    const party = getPartyDetailsFromForm();
+    pendingSaveData = { oNum, toAdd, party };
+    packingModalOverlay.style.display = 'flex';
+  }
+
+  function cancelPackingChoice() {
+    pendingSaveData = null;
+    packingModalOverlay.style.display = 'none';
+  }
+
+  function finalizeSaveOrder(packing) {
+    if (!pendingSaveData) return;
+    const { oNum, toAdd, party } = pendingSaveData;
+    const now = new Date().toISOString();
+    const savedItems = [];
+    toAdd.forEach(item => {
+      const entry = {
+        id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+        order: oNum,
+        design: item.design,
+        sets: item.sets,
+        pcs: item.pcs,
+        price: lookupPrice(item.design),
+        party: party,
+        packing: packing,
+        channel: currentChannel,
+        fy: currentFY,
+        tradeFairId: currentTradeFair ? currentTradeFair.id : null,
+        tradeFairName: currentTradeFair ? currentTradeFair.name : null,
+        tradeFairCity: currentTradeFair ? currentTradeFair.city : null,
+        time: now
+      };
+      entries.unshift(entry);
+      savedItems.push(entry);
+    });
+    saveEntries();
+    if (currentChannel === 'shop') {
+      const numeric = parseInt(oNum, 10);
+      const cur = getShopCounter();
+      if (!isNaN(numeric) && numeric >= cur) setShopCounter(numeric + 1);
+      else setShopCounter(cur + 1);
+      saveShopCounter();
+    }
+    render();
+    if (searchInput.value.trim()) runSearch();
+    showStatus(`✓ Saved order ${oNum || '—'} with ${toAdd.length} design${toAdd.length > 1 ? 's' : ''}`, false);
+    lastSavedOrder = { order: oNum, party: party, items: savedItems };
+    pendingSaveData = null;
+    packingModalOverlay.style.display = 'none';
+    resetForm();
+    openPostSaveModal();
+    linesSinceBackup += toAdd.length;
+    if (linesSinceBackup >= 20) {
+      linesSinceBackup = 0;
+      setTimeout(() => showStatus('💡 You\'ve added a lot of data — consider clicking "Download Backup" above', true), 2400);
+    }
+  }
+
+  function handleDelete(id) {
+    entries = entries.filter(e => e.id !== id);
+    saveEntries();
+    render();
+  }
+
+  function handleClearAll() {
+    if (!clearAllPending) {
+      clearAllPending = true;
+      clearBtn.textContent = 'Click Again to Confirm';
+      clearBtn.style.background = '#b04a4a';
+      clearBtn.style.color = 'white';
+      setTimeout(() => {
+        if (clearAllPending) {
+          clearAllPending = false;
+          clearBtn.textContent = 'Clear All';
+          clearBtn.style.background = '';
+          clearBtn.style.color = '';
+        }
+      }, 4000);
+      return;
+    }
+    clearAllPending = false;
+    clearBtn.textContent = 'Clear All';
+    clearBtn.style.background = '';
+    clearBtn.style.color = '';
+    entries = entries.filter(e => !matchesCurrentScope(e));
+    saveEntries();
+    render();
+    showStatus('✓ Cleared entries for this context', false);
+  }
+
+  function exportCSV() {
+    const totals = computeTotals();
+    let csv = 'Design Number,Total Sets,Total Pcs,Number of Orders,Price\n';
+    totals.forEach(t => { csv += `${t.design},${t.totalSets},${t.totalPcs},${t.orderCount},${t.price}\n`; });
+    csv += '\nRaw Entries\nOrder Number,Design Number,Sets,Pcs,Price,Packing,Party Name,Phone,Haste,Agent,GSTIN,State,City,Consignee,Transport,Station,Export To,Remarks,Timestamp\n';
+    entries.filter(matchesCurrentScope).forEach(e => {
+      const p = e.party || {};
+      csv += `${e.order || ''},${e.design},${e.sets},${e.pcs || 0},${e.price || 0},${(e.packing || '').replace(/,/g, ';')},${(p.custName || '').replace(/,/g, ';')},${(p.custPhone || '')},${(p.haste || '').replace(/,/g, ';')},${(p.agent || '').replace(/,/g, ';')},${(p.gstin || '')},${(p.state || '').replace(/,/g, ';')},${(p.city || '').replace(/,/g, ';')},${(p.consignee || '').replace(/,/g, ';')},${(p.transport || '').replace(/,/g, ';')},${(p.station || '').replace(/,/g, ';')},${(p.expo || '').replace(/,/g, ';')},${(p.remarks || '').replace(/,/g, ';')},${e.time}\n`;
+    });
+    try {
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.download = 'design_order_totals.csv';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 1000);
+    } catch (e) {
+      showStatus('⚠️ CSV export failed — try Download Backup instead', true);
+    }
+  }
+
+  function runOrderSearch() {
+    const q = orderSearchInput.value.trim().toLowerCase();
+    if (!q) {
+      orderSearchResultsWrap.innerHTML = '';
+      return;
+    }
+    const groups = getOrderGroups().filter(g => {
+      const party = g.items[0].party || {};
+      return g.label.toLowerCase().includes(q)
+        || (party.custName || '').toLowerCase().includes(q)
+        || (party.custPhone || '').toLowerCase().includes(q);
+    });
+    if (groups.length === 0) {
+      orderSearchResultsWrap.innerHTML = `<div class="empty-state">No matching orders found.</div>`;
+      return;
+    }
+    orderSearchResultsWrap.innerHTML = buildOrderGroupsHtml(groups);
+    wireOrderPanelEvents(orderSearchResultsWrap, groups, () => {
+      render();
+      runOrderSearch();
+    });
+  }
+
+  function runSearch() {
+    const q = searchInput.value.trim().toLowerCase();
+    if (!q) {
+      searchResultsWrap.innerHTML = '';
+      return;
+    }
+    const matches = getScopedEntries().filter(e => e.design.toLowerCase() === q);
+    if (matches.length === 0) {
+      searchResultsWrap.innerHTML = `<div class="empty-state">No orders found for design "${escapeHtml(searchInput.value.trim())}".</div>`;
+      return;
+    }
+    const totalSets = matches.reduce((s, e) => s + e.sets, 0);
+    const totalPcs = matches.reduce((s, e) => s + (e.pcs || 0), 0);
+    let html = `<div class="stat" style="margin-bottom:12px;"><div class="stat-value">${matches.length}</div><div class="stat-label">Orders containing this design — ${totalSets} total sets${totalPcs > 0 ? ', ' + totalPcs + ' total pcs' : ''}</div></div>`;
+    html += '<table><thead><tr><th>Order #</th><th class="num">Sets</th><th class="num">Pcs</th></tr></thead><tbody>';
+    matches.forEach(e => {
+      html += `<tr><td>${escapeHtml(e.order || '—')}</td><td class="num">${e.sets}</td><td class="num">${e.pcs || 0}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    searchResultsWrap.innerHTML = html;
+  }
+
+  function openPostSaveModal() {
+    if (!lastSavedOrder) return;
+    const totalSets = lastSavedOrder.items.reduce((s, i) => s + i.sets, 0);
+    const totalPcs = lastSavedOrder.items.reduce((s, i) => s + (i.pcs || 0), 0);
+    postSaveOrderLabel.textContent = `Order ${lastSavedOrder.order} — ${lastSavedOrder.items.length} design${lastSavedOrder.items.length > 1 ? 's' : ''}, ${totalSets} sets${totalPcs ? ', ' + totalPcs + ' pcs' : ''}`;
+    whatsAppShareForm.style.display = 'none';
+    whatsAppNumberInput.value = '';
+    postSaveOverlay.style.display = 'flex';
+  }
+  function closePostSaveModal() {
+    postSaveOverlay.style.display = 'none';
+    lastSavedOrder = null;
+  }
+
+  const BUSINESS_NAME = 'Kanak Creative Art';
+  const BUSINESS_TAGLINE = 'MFG. OF EXCLUSIVE FANCY SAREES';
+  const BUSINESS_ADDRESS = 'D-1198-1199, Millennium Textile Market-1, Ring Road, Surat-2.';
+  const BUSINESS_CONTACT_LINE = 'Ph.: 0261-2346045 &nbsp;·&nbsp; Mo.: 93777 42845, 79844 48750 &nbsp;·&nbsp; GSTIN: 24AAKPT5415C1ZV';
+
+  function buildOrderPrintHtml(saved) {
+    const p = saved.party || {};
+    const extraPartyLine = [
+      p.custPhone ? `Mo.: ${p.custPhone}` : '',
+      p.agent ? `Agent: ${p.agent}` : '',
+      p.gstin ? `GSTIN: ${p.gstin}` : '',
+      p.transport ? `Transport: ${p.transport}` : '',
+      p.station ? `Station: ${p.station}` : '',
+      p.consignee ? `Consignee: ${p.consignee}` : '',
+      p.expo ? `Export To: ${p.expo}` : '',
+      p.remarks ? `Remarks: ${p.remarks}` : ''
+    ].filter(Boolean).join(' &nbsp;·&nbsp; ');
+    const dateStr = new Date(saved.items[0].time).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    let itemRows = '';
+    let grandTotal = 0;
+    saved.items.forEach((it, i) => {
+      const qtyParts = [];
+      if (it.sets > 0) qtyParts.push(it.sets + ' Sets');
+      if (it.pcs > 0) qtyParts.push(it.pcs + ' Pcs');
+      const lineTotal = (it.sets + (it.pcs || 0)) * (it.price || 0);
+      grandTotal += lineTotal;
+      itemRows += `<tr><td>${i + 1}</td><td>${escapeHtml(it.design)}</td><td>${it.price ? '₹' + it.price.toLocaleString('en-IN') : '—'}</td><td>${escapeHtml(qtyParts.join(', ') || '—')}</td></tr>`;
+    });
+    return `<!DOCTYPE html><html><head><title>Order ${escapeHtml(saved.order)}</title>
+      <style>
+        body { font-family: Georgia, 'Times New Roman', serif; padding: 30px 36px; color: #1a1a1a; }
+        .letterhead { text-align: center; border-bottom: 2px solid #1a1a1a; padding-bottom: 12px; margin-bottom: 14px; }
+        .biz-name { font-size: 24px; font-weight: 700; letter-spacing: 0.02em; }
+        .biz-tagline { font-size: 12px; letter-spacing: 0.08em; margin-top: 2px; }
+        .biz-address { font-size: 12px; margin-top: 6px; }
+        .biz-contact { font-size: 12px; margin-top: 2px; }
+        .info-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; flex-wrap: wrap; gap: 6px; }
+        .extra-party-line { font-size: 11.5px; color: #444; margin-bottom: 14px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+        th, td { border: 1px solid #1a1a1a; padding: 8px 10px; text-align: left; }
+        th { background: #f0e8dc; }
+        td:nth-child(1) { width: 40px; text-align:center; }
+        td:nth-child(3), td:nth-child(4) { text-align: right; }
+        .grand { text-align: right; font-weight: 700; margin-top: 10px; font-size: 14px; }
+        .sign-row { display: flex; justify-content: space-between; margin-top: 60px; font-size: 13px; }
+        .sign-box { text-align: center; min-width: 200px; }
+        .sign-line { border-top: 1px solid #1a1a1a; margin-bottom: 4px; padding-top: 4px; }
+      </style></head><body>
+      <div class="letterhead">
+        <div class="biz-name">${escapeHtml(BUSINESS_NAME)}</div>
+        <div class="biz-tagline">${escapeHtml(BUSINESS_TAGLINE)}</div>
+        <div class="biz-address">${escapeHtml(BUSINESS_ADDRESS)}</div>
+        <div class="biz-contact">${BUSINESS_CONTACT_LINE}</div>
+      </div>
+      <div class="info-row">
+        <span><b>Sr. No.:</b> ${escapeHtml(saved.order)}</span>
+        <span><b>Date:</b> ${dateStr}</span>
+        <span><b>M/s.:</b> ${escapeHtml(p.custName || '________________________')}</span>
+      </div>
+      ${extraPartyLine ? `<div class="extra-party-line">${extraPartyLine}</div>` : ''}
+      ${saved.items[0].packing ? `<div class="extra-party-line"><b>Packing:</b> ${escapeHtml(saved.items[0].packing)}</div>` : ''}
+      <table>
+        <thead><tr><th>NO.</th><th>DESIGN NO.</th><th>RATE</th><th>QTY</th></tr></thead>
+        <tbody>${itemRows}</tbody>
+      </table>
+      <div class="sign-row">
+        <div class="sign-box"><div class="sign-line">Party's Signature</div></div>
+        <div class="sign-box"><div class="sign-line">For, ${escapeHtml(BUSINESS_NAME)}</div></div>
+      </div>
+      </body></html>`;
+  }
+
+  function printOrderForm(saved) {
+    const html = buildOrderPrintHtml(saved);
+    const printWin = window.open('', '_blank');
+    if (!printWin) {
+      showStatus('⚠️ Pop-up blocked — allow pop-ups to print', true);
+      return;
+    }
+    printWin.document.write(html);
+    printWin.document.close();
+    printWin.onload = () => { printWin.print(); };
+  }
+
+  postSavePrintBtn.addEventListener('click', () => {
+    if (lastSavedOrder) printOrderForm(lastSavedOrder);
+  });
+  postSaveWhatsAppBtn.addEventListener('click', () => {
+    whatsAppShareForm.style.display = 'block';
+    const partyPhone = lastSavedOrder && lastSavedOrder.party ? (lastSavedOrder.party.custPhone || '') : '';
+    if (partyPhone) {
+      let digits = partyPhone.replace(/[^0-9]/g, '');
+      if (digits.length === 10) digits = '91' + digits;
+      whatsAppNumberInput.value = digits;
+    } else {
+      whatsAppNumberInput.value = '';
+    }
+    whatsAppNumberInput.focus();
+  });
+  whatsAppSendBtn.addEventListener('click', () => {
+    const number = whatsAppNumberInput.value.replace(/[^0-9]/g, '');
+    if (!number) {
+      showStatus('⚠️ Enter a WhatsApp number first', true);
+      return;
+    }
+    if (!lastSavedOrder) return;
+    printOrderForm(lastSavedOrder);
+    const totalSets = lastSavedOrder.items.reduce((s, i) => s + i.sets, 0);
+    const msg = encodeURIComponent(`Order ${lastSavedOrder.order} — ${lastSavedOrder.items.length} designs, ${totalSets} sets. PDF attached.`);
+    window.open(`https://wa.me/${number}?text=${msg}`, '_blank');
+    showStatus('✓ Opened print view and WhatsApp — attach the saved PDF there', false);
+  });
+  postSaveCloseBtn.addEventListener('click', closePostSaveModal);
+
+  function printTotals() {
+    const totals = computeTotals();
+    let rows = '';
+    totals.forEach((t, i) => {
+      rows += `<tr><td>${i + 1}</td><td>${escapeHtml(t.design)}</td><td style="text-align:right;">${t.orderCount}</td><td style="text-align:right;">${t.totalSets}</td><td style="text-align:right;">${t.totalPcs}</td><td style="text-align:right;">${t.price > 0 ? '₹' + t.price.toLocaleString('en-IN') : '—'}</td></tr>`;
+    });
+    const html = `
+      <!DOCTYPE html><html><head><title>Totals by Design</title>
+      <style>
+        body { font-family: -apple-system, Arial, sans-serif; padding: 24px; color: #2a2420; }
+        h1 { font-size: 18px; margin-bottom: 4px; }
+        .meta { color: #7a7168; font-size: 12px; margin-bottom: 18px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 7px 10px; border-bottom: 1px solid #ddd; text-align: left; }
+        th { background: #f0ddd0; color: #2a2420; }
+      </style></head><body>
+      <h1>Totals by Design</h1>
+      <div class="meta">Generated ${new Date().toLocaleString()}</div>
+      <table>
+        <thead><tr><th>#</th><th>Design</th><th style="text-align:right;">Times Ordered</th><th style="text-align:right;">Total Sets</th><th style="text-align:right;">Total Pcs</th><th style="text-align:right;">Price</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      </body></html>`;
+    const printWin = window.open('', '_blank');
+    if (!printWin) {
+      showStatus('⚠️ Pop-up blocked — allow pop-ups to print', true);
+      return;
+    }
+    printWin.document.write(html);
+    printWin.document.close();
+    printWin.onload = () => { printWin.print(); };
+  }
+
+  addBtn.addEventListener('click', handleSaveOrderClick);
+  cancelPackingBtn.addEventListener('click', cancelPackingChoice);
+  document.querySelectorAll('.packing-choice-btn').forEach(btn => {
+    btn.addEventListener('click', () => finalizeSaveOrder(btn.getAttribute('data-packing')));
+  });
+  addRowBtn.addEventListener('click', () => {
+    const rows = designRows.querySelectorAll('.design-row');
+    const lastRow = rows[rows.length - 1];
+    const dField = lastRow.querySelector('.design-field');
+    const sField = lastRow.querySelector('.sets-field');
+    const pField = lastRow.querySelector('.pcs-field');
+    const setCount = parseInt(sField.value, 10) || 0;
+    const pcsCount = parseInt(pField.value, 10) || 0;
+    if (!dField.value.trim() || (setCount <= 0 && pcsCount <= 0)) {
+      showStatus('⚠️ Fill in the current design line before adding another', true);
+      return;
+    }
+    addDesignRow(true);
+  });
+  orderInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const firstDesignField = designRows.querySelector('.design-field');
+      if (firstDesignField) firstDesignField.focus();
+    }
+  });
+  async function downloadBackup() {
+    // Re-save first, so storage is guaranteed up to date no matter what happens next
+    await saveEntries();
+    const payload = {
+      app: 'design-order-tracker',
+      exportedAt: new Date().toISOString(),
+      entries: entries
+    };
+    try {
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      a.download = `design_order_backup_${stamp}.json`;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 1000);
+      lastBackupNote.textContent = 'Last backup: just now (' + entries.length + ' lines) — your data is saved either way';
+    } catch (e) {
+      showStatus('⚠️ Download failed, but your data is still saved — try again', true);
+    }
+  }
+
+  function processRestorePayload(rawText) {
+    let parsed;
+    try {
+      parsed = JSON.parse(rawText);
+    } catch (e) {
+      showStatus('⚠️ That is not valid backup data', true);
+      return;
+    }
+    const incoming = Array.isArray(parsed) ? parsed : parsed.entries;
+    if (!Array.isArray(incoming)) {
+      showStatus('⚠️ That is not valid backup data', true);
+      return;
+    }
+    pendingRestore = { incoming };
+    restoreConfirmWrap.style.display = 'block';
+    restoreConfirmWrap.innerHTML = `
+      <div style="background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px;">
+        <p style="font-size:13px; margin:0 0 10px;">This backup has <strong>${incoming.length}</strong> lines. Your current data has <strong>${entries.length}</strong> lines.</p>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn-add btn-tiny" id="confirmReplaceBtn">Replace Current Data</button>
+          <button class="btn-secondary btn-tiny" id="confirmMergeBtn">Merge Into Current Data</button>
+          <button class="btn-secondary btn-tiny" id="confirmRestoreCancelBtn">Cancel</button>
+        </div>
+      </div>`;
+    document.getElementById('confirmReplaceBtn').addEventListener('click', () => {
+      entries = pendingRestore.incoming;
+      finishRestore();
+    });
+    document.getElementById('confirmMergeBtn').addEventListener('click', () => {
+      const existingIds = new Set(entries.map(e => e.id));
+      pendingRestore.incoming.forEach(e => { if (!existingIds.has(e.id)) entries.push(e); });
+      finishRestore();
+    });
+    document.getElementById('confirmRestoreCancelBtn').addEventListener('click', () => {
+      pendingRestore = null;
+      restoreConfirmWrap.style.display = 'none';
+      restoreConfirmWrap.innerHTML = '';
+    });
+  }
+
+  function finishRestore() {
+    const count = pendingRestore.incoming.length;
+    pendingRestore = null;
+    restoreConfirmWrap.style.display = 'none';
+    restoreConfirmWrap.innerHTML = '';
+    saveEntries();
+    render();
+    showStatus(`✓ Restored ${count} lines from backup`, false);
+  }
+
+  function restoreFromFile(file) {
+    const reader = new FileReader();
+    reader.onload = () => processRestorePayload(reader.result);
+    reader.readAsText(file);
+  }
+
+  function restoreFromText() {
+    restoreTextWrap.style.display = 'block';
+    restoreTextArea.value = '';
+    restoreTextArea.focus();
+  }
+
+  async function showBackupAsText() {
+    await saveEntries();
+    const payload = {
+      app: 'design-order-tracker',
+      exportedAt: new Date().toISOString(),
+      entries: entries
+    };
+    backupTextArea.value = JSON.stringify(payload, null, 2);
+    copyTextWrap.style.display = 'block';
+    try {
+      backupTextArea.focus();
+      backupTextArea.select();
+      if (document.execCommand) document.execCommand('copy');
+      lastBackupNote.textContent = 'Copied to clipboard (' + entries.length + ' lines) — also paste it somewhere safe manually just in case';
+    } catch (e) {
+      lastBackupNote.textContent = 'Select the text below and copy it manually (' + entries.length + ' lines)';
+    }
+  }
+
+  copyTextBtn.addEventListener('click', showBackupAsText);
+  selectAllTextBtn.addEventListener('click', () => {
+    backupTextArea.focus();
+    backupTextArea.select();
+  });
+
+  backupBtn.addEventListener('click', downloadBackup);
+  restoreBtn.addEventListener('click', () => restoreFileInput.click());
+  restoreTextBtn.addEventListener('click', restoreFromText);
+  loadRestoreTextBtn.addEventListener('click', () => {
+    const raw = restoreTextArea.value.trim();
+    if (raw) {
+      processRestorePayload(raw);
+      restoreTextWrap.style.display = 'none';
+    } else {
+      showStatus('⚠️ Paste your backup text first', true);
+    }
+  });
+  cancelRestoreTextBtn.addEventListener('click', () => {
+    restoreTextWrap.style.display = 'none';
+    restoreTextArea.value = '';
+  });
+  restoreFileInput.addEventListener('change', () => {
+    if (restoreFileInput.files && restoreFileInput.files[0]) {
+      restoreFromFile(restoreFileInput.files[0]);
+      restoreFileInput.value = '';
+    }
+  });
+
+  sortSelect.addEventListener('change', () => {
+    totalsSortMode = sortSelect.value;
+    render();
+  });
+  exportBtn.addEventListener('click', exportCSV);
+  printBtn.addEventListener('click', printTotals);
+  clearBtn.addEventListener('click', handleClearAll);
+  searchBtn.addEventListener('click', runSearch);
+  searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') runSearch(); });
+  searchClearBtn.addEventListener('click', () => { searchInput.value = ''; searchResultsWrap.innerHTML = ''; });
+
+  catalogUploadBtn.addEventListener('click', () => catalogFileInput.click());
+  catalogFileInput.addEventListener('change', () => {
+    if (catalogFileInput.files && catalogFileInput.files[0]) {
+      handleCatalogUpload(catalogFileInput.files[0]);
+      catalogFileInput.value = '';
+    }
+  });
+  clearCatalogBtn.addEventListener('click', () => {
+    if (!clearCatalogPending) {
+      clearCatalogPending = true;
+      clearCatalogBtn.textContent = 'Click Again to Confirm';
+      clearCatalogBtn.style.background = '#b04a4a';
+      clearCatalogBtn.style.color = 'white';
+      setTimeout(() => {
+        if (clearCatalogPending) {
+          clearCatalogPending = false;
+          clearCatalogBtn.textContent = 'Clear Catalog';
+          clearCatalogBtn.style.background = '';
+          clearCatalogBtn.style.color = '';
+        }
+      }, 4000);
+      return;
+    }
+    clearCatalogPending = false;
+    clearCatalogBtn.textContent = 'Clear Catalog';
+    clearCatalogBtn.style.background = '';
+    clearCatalogBtn.style.color = '';
+    catalog = [];
+    saveCatalog();
+    renderCatalogUI();
+    showStatus('✓ Catalog cleared', false);
+  });
+
+  let clearCustomerDBPending = false;
+  customerDBUploadBtn.addEventListener('click', () => customerDBFileInput.click());
+  customerDBFileInput.addEventListener('change', () => {
+    if (customerDBFileInput.files && customerDBFileInput.files[0]) {
+      handleCustomerDBUpload(customerDBFileInput.files[0]);
+      customerDBFileInput.value = '';
+    }
+  });
+  clearCustomerDBBtn.addEventListener('click', () => {
+    if (!clearCustomerDBPending) {
+      clearCustomerDBPending = true;
+      clearCustomerDBBtn.textContent = 'Click Again to Confirm';
+      clearCustomerDBBtn.style.background = '#b04a4a';
+      clearCustomerDBBtn.style.color = 'white';
+      setTimeout(() => {
+        if (clearCustomerDBPending) {
+          clearCustomerDBPending = false;
+          clearCustomerDBBtn.textContent = 'Clear';
+          clearCustomerDBBtn.style.background = '';
+          clearCustomerDBBtn.style.color = '';
+        }
+      }, 4000);
+      return;
+    }
+    clearCustomerDBPending = false;
+    clearCustomerDBBtn.textContent = 'Clear';
+    clearCustomerDBBtn.style.background = '';
+    clearCustomerDBBtn.style.color = '';
+    customerDB = [];
+    saveCustomerDB();
+    renderCustomerDBUI();
+    showStatus('✓ Customer database cleared', false);
+  });
+  document.getElementById('p-custName').addEventListener('input', (e) => {
+    showCustNameSuggestions(e.target.value);
+  });
+  document.getElementById('p-custName').addEventListener('blur', () => {
+    setTimeout(() => { custNameSuggestions.style.display = 'none'; }, 150);
+  });
+
+  cameraToggleBtn.addEventListener('click', toggleCameraScan);
+  let gunScanTimer = null;
+  gunScanInput.addEventListener('input', () => {
+    clearTimeout(gunScanTimer);
+    gunScanTimer = setTimeout(() => {
+      const code = gunScanInput.value.trim();
+      if (code) {
+        gunScanInput.value = '';
+        handleScanCode(code);
+      }
+    }, 150);
+  });
+  gunScanInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      clearTimeout(gunScanTimer);
+      const code = gunScanInput.value.trim();
+      gunScanInput.value = '';
+      if (code) handleScanCode(code);
+    }
+  });
+
+  addDesignRow(false);
+
+  goShopBtn.addEventListener('click', enterShop);
+  goTradeFairBtn.addEventListener('click', () => showScreen('tradeFairList'));
+  backToHomeFromListBtn.addEventListener('click', () => showScreen('home'));
+  switchContextBtn.addEventListener('click', () => {
+    if (currentChannel === 'tradefair') showScreen('tradeFairList');
+    else showScreen('home');
+  });
+  function resetTradeFairForm() {
+    editingFairId = null;
+    tradeFairFormTitle.textContent = 'New Trade Fair';
+    createTradeFairBtn.textContent = 'Create';
+    newFairName.value = '';
+    newFairCity.value = '';
+    newFairStartDate.value = '';
+    newFairEndDate.value = '';
+  }
+
+  showAddTradeFairBtn.addEventListener('click', () => {
+    resetTradeFairForm();
+    addTradeFairForm.style.display = 'block';
+    newFairName.focus();
+  });
+  cancelAddTradeFairBtn.addEventListener('click', () => {
+    addTradeFairForm.style.display = 'none';
+    resetTradeFairForm();
+  });
+  createTradeFairBtn.addEventListener('click', () => {
+    const name = newFairName.value.trim();
+    const city = newFairCity.value.trim();
+    const startDate = newFairStartDate.value;
+    const endDate = newFairEndDate.value;
+    if (!name) {
+      newFairName.focus();
+      return;
+    }
+    if (editingFairId) {
+      const fair = tradeFairs.find(f => f.id === editingFairId);
+      if (fair) {
+        fair.name = name;
+        fair.city = city;
+        fair.startDate = startDate;
+        fair.endDate = endDate;
+        if (currentTradeFair && currentTradeFair.id === fair.id) {
+          currentTradeFair = fair;
+          updateContextBar();
+        }
+      }
+      saveTradeFairs();
+      addTradeFairForm.style.display = 'none';
+      resetTradeFairForm();
+      renderTradeFairList();
+      showStatus('✓ Trade fair updated', false);
+    } else {
+      const fair = { id: Date.now() + '-' + Math.random().toString(36).slice(2, 6), name, city, startDate, endDate, createdAt: new Date().toISOString() };
+      tradeFairs.push(fair);
+      saveTradeFairs();
+      addTradeFairForm.style.display = 'none';
+      resetTradeFairForm();
+      renderTradeFairList();
+      enterTradeFair(fair);
+    }
+  });
+
+  orderSearchBtn.addEventListener('click', runOrderSearch);
+  orderSearchInput.addEventListener('keydown', e => { if (e.key === 'Enter') runOrderSearch(); });
+  orderSearchClearBtn.addEventListener('click', () => { orderSearchInput.value = ''; orderSearchResultsWrap.innerHTML = ''; });
+
+  fyBadge.addEventListener('click', openFYPicker);
+  backupPillBtn.addEventListener('click', () => { backupModalOverlay.style.display = 'flex'; });
+  backupModalCloseBtn.addEventListener('click', () => { backupModalOverlay.style.display = 'none'; });
+  fyCancelBtn.addEventListener('click', () => { fyPickerOverlay.style.display = 'none'; });
+
+  Promise.all([loadEntries(), loadTradeFairs(), loadShopCounter(), loadCatalog(), loadFY(), loadCustomerDB()]).then(() => {
+    showScreen('home');
+  });
+</script>
+</body>
+</html>
