@@ -322,9 +322,9 @@
         <input type="text" id="orderInput" placeholder="e.g. O-2201">
       </div>
 
-      <details id="partyDetailsToggle" style="margin-bottom: 14px;">
-        <summary style="cursor:pointer; font-weight:600; font-size:13.5px; color: var(--muted);">Party Details (optional)</summary>
-        <div style="margin-top: 12px;">
+      <div style="margin-bottom: 14px;">
+        <div style="font-weight:600; font-size:13.5px; color: var(--muted); margin-bottom:12px;">Party Details</div>
+        <div>
           <div class="entry-row">
             <div class="field" style="position:relative;">
               <label>M/s. (Party Name)</label>
@@ -352,7 +352,7 @@
             <div class="field"><label>Remarks</label><input type="text" id="p-remarks" placeholder="Notes for this whole order"></div>
           </div>
         </div>
-      </details>
+      </div>
 
       <div class="scan-row">
         <button class="btn-secondary" id="cameraToggleBtn">📷 Scan with Camera</button>
@@ -1213,19 +1213,47 @@
     reader.readAsArrayBuffer(file);
   }
 
+  let currentSuggestionMatches = [];
+  let highlightedSuggestionIndex = -1;
+
+  function selectCustomer(c) {
+    document.getElementById('p-custName').value = c.name;
+    document.getElementById('p-custPhone').value = c.mobile || '';
+    document.getElementById('p-gstin').value = c.gst || '';
+    document.getElementById('p-state').value = c.state || '';
+    document.getElementById('p-city').value = c.city || '';
+    document.getElementById('p-transport').value = c.transport || '';
+    closeCustSuggestions();
+  }
+
+  function closeCustSuggestions() {
+    custNameSuggestions.style.display = 'none';
+    custNameSuggestions.innerHTML = '';
+    currentSuggestionMatches = [];
+    highlightedSuggestionIndex = -1;
+  }
+
+  function renderSuggestionHighlight() {
+    custNameSuggestions.querySelectorAll('.cust-suggestion-item').forEach((item, i) => {
+      item.style.background = (i === highlightedSuggestionIndex) ? 'var(--accent-soft)' : '';
+    });
+    const activeEl = custNameSuggestions.querySelector(`[data-cust-idx="${highlightedSuggestionIndex}"]`);
+    if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
+  }
+
   function showCustNameSuggestions(query) {
     const q = query.trim().toLowerCase();
     if (!q || customerDB.length === 0) {
-      custNameSuggestions.style.display = 'none';
-      custNameSuggestions.innerHTML = '';
+      closeCustSuggestions();
       return;
     }
     const matches = customerDB.filter(c => c.name.toLowerCase().includes(q)).slice(0, 8);
     if (matches.length === 0) {
-      custNameSuggestions.style.display = 'none';
-      custNameSuggestions.innerHTML = '';
+      closeCustSuggestions();
       return;
     }
+    currentSuggestionMatches = matches;
+    highlightedSuggestionIndex = -1;
     custNameSuggestions.innerHTML = matches.map((c, i) => `
       <div class="cust-suggestion-item" data-cust-idx="${i}" style="padding:8px 12px; cursor:pointer; border-bottom:1px solid var(--line); font-size:13px;">
         <div style="font-weight:600;">${escapeHtml(c.name)}</div>
@@ -1234,15 +1262,11 @@
     custNameSuggestions.querySelectorAll('.cust-suggestion-item').forEach((item, i) => {
       item.addEventListener('mousedown', (e) => {
         e.preventDefault();
-        const c = matches[i];
-        document.getElementById('p-custName').value = c.name;
-        document.getElementById('p-custPhone').value = c.mobile || '';
-        document.getElementById('p-gstin').value = c.gst || '';
-        document.getElementById('p-state').value = c.state || '';
-        document.getElementById('p-city').value = c.city || '';
-        document.getElementById('p-transport').value = c.transport || '';
-        custNameSuggestions.style.display = 'none';
-        custNameSuggestions.innerHTML = '';
+        selectCustomer(matches[i]);
+      });
+      item.addEventListener('mouseenter', () => {
+        highlightedSuggestionIndex = i;
+        renderSuggestionHighlight();
       });
     });
     custNameSuggestions.style.display = 'block';
@@ -1314,6 +1338,10 @@
 
   let html5QrCode = null;
   let cameraActive = false;
+  let lastScannedCode = null;
+  let lastScannedTime = 0;
+  const SCAN_COOLDOWN_MS = 2500;
+
   function toggleCameraScan() {
     const box = document.getElementById('qr-reader');
     if (cameraActive) {
@@ -1321,6 +1349,7 @@
       box.classList.remove('active');
       cameraToggleBtn.textContent = '📷 Scan with Camera';
       cameraActive = false;
+      lastScannedCode = null;
       return;
     }
     if (typeof Html5Qrcode === 'undefined') {
@@ -1330,11 +1359,21 @@
     box.classList.add('active');
     cameraToggleBtn.textContent = '✕ Stop Camera';
     cameraActive = true;
+    lastScannedCode = null;
+    lastScannedTime = 0;
     html5QrCode = new Html5Qrcode('qr-reader');
     html5QrCode.start(
       { facingMode: 'environment' },
       { fps: 10, qrbox: 240 },
-      (decodedText) => { handleScanCode(decodedText); },
+      (decodedText) => {
+        const now = Date.now();
+        if (decodedText === lastScannedCode && (now - lastScannedTime) < SCAN_COOLDOWN_MS) {
+          return; // same code still in view — ignore repeat scans
+        }
+        lastScannedCode = decodedText;
+        lastScannedTime = now;
+        handleScanCode(decodedText);
+      },
       () => { /* ignore per-frame no-match noise */ }
     ).catch(err => {
       showStatus('⚠️ Could not start camera — check browser camera permission', true);
@@ -2236,12 +2275,6 @@
     }
     addDesignRow(true);
   });
-  orderInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      const firstDesignField = designRows.querySelector('.design-field');
-      if (firstDesignField) firstDesignField.focus();
-    }
-  });
   async function downloadBackup() {
     // Re-save first, so storage is guaranteed up to date no matter what happens next
     await saveEntries();
@@ -2463,7 +2496,51 @@
     showCustNameSuggestions(e.target.value);
   });
   document.getElementById('p-custName').addEventListener('blur', () => {
-    setTimeout(() => { custNameSuggestions.style.display = 'none'; }, 150);
+    setTimeout(() => { closeCustSuggestions(); }, 150);
+  });
+  document.getElementById('p-custName').addEventListener('keydown', (e) => {
+    const hasSuggestions = custNameSuggestions.style.display === 'block' && currentSuggestionMatches.length > 0;
+    if (hasSuggestions && e.key === 'ArrowDown') {
+      e.preventDefault();
+      highlightedSuggestionIndex = Math.min(highlightedSuggestionIndex + 1, currentSuggestionMatches.length - 1);
+      renderSuggestionHighlight();
+      return;
+    }
+    if (hasSuggestions && e.key === 'ArrowUp') {
+      e.preventDefault();
+      highlightedSuggestionIndex = Math.max(highlightedSuggestionIndex - 1, 0);
+      renderSuggestionHighlight();
+      return;
+    }
+    if (hasSuggestions && e.key === 'Escape') {
+      closeCustSuggestions();
+      return;
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (hasSuggestions && highlightedSuggestionIndex >= 0) {
+        selectCustomer(currentSuggestionMatches[highlightedSuggestionIndex]);
+      }
+      document.getElementById('p-custPhone').focus();
+    }
+  });
+
+  // Enter-key chain: Order Number -> Party Details -> first design row
+  const enterChainIds = ['orderInput', 'p-custName', 'p-custPhone', 'p-haste', 'p-agent', 'p-gstin', 'p-state', 'p-city', 'p-consignee', 'p-transport', 'p-station', 'p-expo', 'p-remarks'];
+  enterChainIds.forEach((id, idx) => {
+    if (id === 'p-custName') return; // has its own keydown handler above
+    const el = document.getElementById(id);
+    el.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const nextId = enterChainIds[idx + 1];
+      if (nextId) {
+        document.getElementById(nextId).focus();
+      } else {
+        const firstDesignField = designRows.querySelector('.design-field');
+        if (firstDesignField) firstDesignField.focus();
+      }
+    });
   });
 
   cameraToggleBtn.addEventListener('click', toggleCameraScan);
