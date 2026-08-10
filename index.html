@@ -1803,9 +1803,10 @@
     row.className = 'design-row';
     row.setAttribute('data-row-id', rowId);
     row.innerHTML = `
-      <div class="field">
+      <div class="field" style="position:relative;">
         <label>Design Number</label>
         <input type="text" class="design-field" placeholder="e.g. D-104">
+        <div class="design-suggestions" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--card); border:1px solid var(--line); border-radius:8px; margin-top:4px; z-index:50; max-height:180px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
       </div>
       <div class="field" style="max-width: 100px;">
         <label>Sets</label>
@@ -1830,6 +1831,57 @@
     const sField = row.querySelector('.sets-field');
     const pField = row.querySelector('.pcs-field');
     const priceDisplay = row.querySelector('.price-display');
+    const designSuggestions = row.querySelector('.design-suggestions');
+    let designMatches = [];
+    let designHighlightIndex = -1;
+
+    function closeDesignSuggestions() {
+      designSuggestions.style.display = 'none';
+      designSuggestions.innerHTML = '';
+      designMatches = [];
+      designHighlightIndex = -1;
+    }
+
+    function renderDesignHighlight() {
+      designSuggestions.querySelectorAll('.design-suggestion-item').forEach((item, i) => {
+        item.style.background = (i === designHighlightIndex) ? 'var(--accent-soft)' : '';
+      });
+      const activeEl = designSuggestions.querySelector(`[data-design-idx="${designHighlightIndex}"]`);
+      if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
+    }
+
+    function selectDesignSuggestion(d) {
+      dField.value = d.design;
+      updatePriceDisplay();
+      closeDesignSuggestions();
+      sField.focus();
+    }
+
+    function showDesignSuggestions(query) {
+      const q = query.trim().toLowerCase();
+      if (!q || catalog.length === 0) { closeDesignSuggestions(); return; }
+      const matches = catalog.filter(d => d.design.toLowerCase().includes(q)).slice(0, 8);
+      if (matches.length === 0) { closeDesignSuggestions(); return; }
+      designMatches = matches;
+      designHighlightIndex = -1;
+      designSuggestions.innerHTML = matches.map((d, i) => `
+        <div class="design-suggestion-item" data-design-idx="${i}" style="padding:8px 12px; cursor:pointer; border-bottom:1px solid var(--line); font-size:13px; display:flex; justify-content:space-between; gap:8px;">
+          <span style="font-weight:600;">${escapeHtml(d.design)}</span>
+          <span style="color: var(--muted);">${d.price > 0 ? '₹' + d.price.toLocaleString('en-IN') : ''}</span>
+        </div>`).join('');
+      designSuggestions.querySelectorAll('.design-suggestion-item').forEach((item, i) => {
+        item.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          selectDesignSuggestion(matches[i]);
+        });
+        item.addEventListener('mouseenter', () => {
+          designHighlightIndex = i;
+          renderDesignHighlight();
+        });
+      });
+      designSuggestions.style.display = 'block';
+    }
+
     function updatePriceDisplay() {
       const design = dField.value.trim();
       if (!design) { priceDisplay.textContent = '—'; return; }
@@ -1838,7 +1890,11 @@
     }
     dField.addEventListener('input', updatePriceDisplay);
     row._updatePriceDisplay = updatePriceDisplay;
-    dField.addEventListener('blur', updatePriceDisplay);
+    dField.addEventListener('blur', () => {
+      updatePriceDisplay();
+      setTimeout(() => { closeDesignSuggestions(); }, 150);
+    });
+    dField.addEventListener('input', (e) => { showDesignSuggestions(e.target.value); });
     sField.addEventListener('focus', () => { sField.select(); });
     pField.addEventListener('focus', () => { pField.select(); });
     let dEmptyEnterCount = 0;
@@ -1853,7 +1909,29 @@
     }
 
     dField.addEventListener('keydown', e => {
+      const hasSuggestions = designSuggestions.style.display === 'block' && designMatches.length > 0;
+      if (hasSuggestions && e.key === 'ArrowDown') {
+        e.preventDefault();
+        designHighlightIndex = Math.min(designHighlightIndex + 1, designMatches.length - 1);
+        renderDesignHighlight();
+        return;
+      }
+      if (hasSuggestions && e.key === 'ArrowUp') {
+        e.preventDefault();
+        designHighlightIndex = Math.max(designHighlightIndex - 1, 0);
+        renderDesignHighlight();
+        return;
+      }
+      if (hasSuggestions && e.key === 'Escape') {
+        closeDesignSuggestions();
+        return;
+      }
       if (e.key === 'Enter') {
+        if (hasSuggestions && designHighlightIndex >= 0) {
+          e.preventDefault();
+          selectDesignSuggestion(designMatches[designHighlightIndex]);
+          return;
+        }
         if (!dField.value.trim()) {
           dEmptyEnterCount++;
           if (dEmptyEnterCount >= 3) {
@@ -1865,6 +1943,7 @@
           return;
         }
         dEmptyEnterCount = 0;
+        closeDesignSuggestions();
         sField.focus();
       }
     });
