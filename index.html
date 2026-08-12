@@ -265,7 +265,7 @@
       <div id="addTradeFairForm" style="display:none; margin-bottom:16px; padding:14px; background: var(--bg); border-radius:8px; border:1px solid var(--line);">
         <div style="font-weight:600; font-size:13.5px; margin-bottom:10px;" id="tradeFairFormTitle">New Trade Fair</div>
         <div class="entry-row">
-          <div class="field"><label>Party Name</label><input type="text" id="newFairPartyName" placeholder="e.g. main customer at this fair"></div>
+          <div class="field"><label>Client / Host Name</label><input type="text" id="newFairPartyName" placeholder="e.g. the business running this fair"></div>
           <div class="field"><label>Trade Fair Name</label><input type="text" id="newFairName" placeholder="e.g. Surat Textile Expo"></div>
         </div>
         <div class="entry-row" style="margin-top:10px;">
@@ -476,12 +476,14 @@
   let customerDBUpdatedAt = null;
   const TRADE_FAIRS_KEY = 'trade-fairs-v1';
   const SHOP_COUNTER_KEY = 'shop-order-counter-v1';
+  const TRADE_FAIR_COUNTER_KEY = 'trade-fair-order-counter-v1';
   const FY_STORAGE_KEY = 'current-fy-v1';
   let currentFY = null;
   let catalog = []; // [{design, qr}]
   let entries = [];
   let tradeFairs = []; // [{id, name, city, createdAt}]
   let shopOrderCounters = {}; // { "2026-27": 45, ... }
+  let tradeFairOrderCounters = {}; // { fairId: nextNumber, ... }
   let currentChannel = null; // 'shop' | 'tradefair'
   let currentTradeFair = null; // {id, name, city}
   let editingFairId = null;
@@ -857,6 +859,20 @@
     shopOrderCounters[fy] = val;
   }
 
+  async function loadTradeFairCounters() {
+    const raw = await loadData(TRADE_FAIR_COUNTER_KEY, false, {});
+    tradeFairOrderCounters = (typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+  }
+  async function saveTradeFairCounters() {
+    await persistData(TRADE_FAIR_COUNTER_KEY, tradeFairOrderCounters, false);
+  }
+  function getTradeFairCounter(fairId) {
+    return tradeFairOrderCounters[fairId] || 1;
+  }
+  function setTradeFairCounter(fairId, val) {
+    tradeFairOrderCounters[fairId] = val;
+  }
+
   // ---------- Financial Year ----------
   function computeDefaultFY() {
     return computeFYFromDate(new Date());
@@ -941,7 +957,7 @@
       const isPendingDelete = pendingDeleteFairId === f.id;
       return `<div class="fair-row" data-fair-id="${escapeHtml(f.id)}" style="cursor:default;">
         <div data-fair-enter="${escapeHtml(f.id)}" style="cursor:pointer; flex:1;">
-          <div class="fair-row-title">${escapeHtml(f.name)}${f.partyName ? ' — ' + escapeHtml(f.partyName) : ''}</div>
+          <div class="fair-row-title">${escapeHtml(f.name)}${f.partyName ? ' (Client: ' + escapeHtml(f.partyName) + ')' : ''}</div>
           <div class="fair-row-sub">${escapeHtml(f.city || '')}${dateLabel ? ' · ' + dateLabel : ''}${countLabel}</div>
         </div>
         <div style="display:flex; gap:6px; align-items:center;">
@@ -1019,10 +1035,9 @@
   function enterTradeFair(fair) {
     currentChannel = 'tradefair';
     currentTradeFair = fair;
-    orderInput.value = '';
+    orderInput.value = String(getTradeFairCounter(fair.id));
     showScreen('entry');
     render();
-    if (fair.partyName) document.getElementById('p-custName').value = fair.partyName;
   }
 
   function updateContextBar() {
@@ -1987,12 +2002,15 @@
   }
 
   function resetForm() {
-    orderInput.value = (currentChannel === 'shop') ? String(getShopCounter()) : '';
+    if (currentChannel === 'shop') {
+      orderInput.value = String(getShopCounter());
+    } else if (currentChannel === 'tradefair' && currentTradeFair) {
+      orderInput.value = String(getTradeFairCounter(currentTradeFair.id));
+    } else {
+      orderInput.value = '';
+    }
     designRows.innerHTML = '';
     clearPartyDetailsForm();
-    if (currentChannel === 'tradefair' && currentTradeFair && currentTradeFair.partyName) {
-      document.getElementById('p-custName').value = currentTradeFair.partyName;
-    }
     addDesignRow(false);
     orderInput.focus();
   }
@@ -2005,6 +2023,19 @@
       showStatus('⚠️ Order Number is required before saving', true);
       orderInput.focus();
       return;
+    }
+    if (currentChannel === 'tradefair' && currentTradeFair) {
+      const duplicate = entries.some(e =>
+        e.channel === 'tradefair' &&
+        e.tradeFairId === currentTradeFair.id &&
+        (e.order || '').trim().toLowerCase() === oNum.toLowerCase()
+      );
+      if (duplicate) {
+        showStatus(`⚠️ Order number "${oNum}" is already used in this trade fair — please use a different number`, true);
+        orderInput.focus();
+        orderInput.select();
+        return;
+      }
     }
     const rows = designRows.querySelectorAll('.design-row');
     const toAdd = [];
@@ -2063,6 +2094,12 @@
       if (!isNaN(numeric) && numeric >= cur) setShopCounter(numeric + 1);
       else setShopCounter(cur + 1);
       saveShopCounter();
+    } else if (currentChannel === 'tradefair' && currentTradeFair) {
+      const numeric = parseInt(oNum, 10);
+      const cur = getTradeFairCounter(currentTradeFair.id);
+      if (!isNaN(numeric) && numeric >= cur) setTradeFairCounter(currentTradeFair.id, numeric + 1);
+      else setTradeFairCounter(currentTradeFair.id, cur + 1);
+      saveTradeFairCounters();
     }
     render();
     if (searchInput.value.trim()) runSearch();
@@ -2234,9 +2271,9 @@
         <style>
           body { font-family: ${PRINT_FONT}; font-weight: 700; padding: 30px 36px; color: #1a1a1a; }
           .letterhead { text-align: center; padding-bottom: 12px; margin-bottom: 14px; }
-          .party-name { font-size: 48px; font-weight: 700; letter-spacing: 0.02em; }
+          .party-name { font-size: 32px; font-weight: 700; letter-spacing: 0.02em; }
           .fair-name { font-size: 15px; margin-top: 6px; font-weight: 700; }
-          .supplier-line { font-size: 14px; font-weight: 700; margin-top: 10px; }
+          .supplier-line { font-size: 15px; font-weight: 700; margin-top: 10px; margin-bottom: 22px; }
           .info-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; flex-wrap: wrap; gap: 6px; }
           .extra-party-line { font-size: 11.5px; margin-bottom: 14px; }
           table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
@@ -2782,7 +2819,7 @@
   backupModalCloseBtn.addEventListener('click', () => { backupModalOverlay.style.display = 'none'; });
   fyCancelBtn.addEventListener('click', () => { fyPickerOverlay.style.display = 'none'; });
 
-  Promise.all([loadEntries(), loadTradeFairs(), loadShopCounter(), loadCatalog(), loadFY(), loadCustomerDB()]).then(() => {
+  Promise.all([loadEntries(), loadTradeFairs(), loadShopCounter(), loadTradeFairCounters(), loadCatalog(), loadFY(), loadCustomerDB()]).then(() => {
     showScreen('home');
   });
 </script>
