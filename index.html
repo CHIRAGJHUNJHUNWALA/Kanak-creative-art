@@ -194,6 +194,7 @@
   <div id="fyBar" style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:2px;">
     <h1 style="margin:0; font-size:22px;">Kanak Creative Art</h1>
     <div style="display:flex; gap:8px;">
+      <button id="logoutBtn" style="display:none; background: var(--card); color: var(--muted); border: 1px solid var(--line); border-radius: 20px; padding: 5px 14px; font-size: 12px; font-weight: 700; cursor: pointer;">Logout</button>
       <button id="backupPillBtn" style="background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); border-radius: 20px; padding: 5px 14px; font-size: 12px; font-weight: 700; cursor: pointer;">💾 Backup</button>
       <button id="fyBadge" style="background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); border-radius: 20px; padding: 5px 14px; font-size: 12px; font-weight: 700; cursor: pointer;">FY —</button>
     </div>
@@ -240,7 +241,34 @@
     </div>
   </div>
 
-  <div id="homeScreen">
+  <div id="loginScreen" style="display:none; max-width:380px; margin:60px auto 0;">
+    <div class="card" style="text-align:center;">
+      <div style="font-size:18px; font-weight:700; margin-bottom:6px;">Staff Login</div>
+      <div style="font-size:13px; color: var(--muted); margin-bottom:20px;">Sign in with your registered phone number to access this app.</div>
+
+      <div id="loginPhoneStep">
+        <div class="field" style="text-align:left; margin-bottom:12px;">
+          <label>Mobile Number</label>
+          <input type="tel" id="loginPhoneInput" placeholder="98xxxxxxxx" maxlength="10">
+        </div>
+        <button class="btn-add" id="sendOtpBtn" style="width:100%;">Send OTP</button>
+      </div>
+
+      <div id="loginOtpStep" style="display:none;">
+        <div class="field" style="text-align:left; margin-bottom:12px;">
+          <label>Enter OTP</label>
+          <input type="text" id="loginOtpInput" placeholder="6-digit code" maxlength="6" inputmode="numeric">
+        </div>
+        <button class="btn-add" id="verifyOtpBtn" style="width:100%;">Verify & Login</button>
+        <button class="btn-secondary btn-tiny" id="resendOtpBtn" style="width:100%; margin-top:10px;">Resend OTP</button>
+      </div>
+
+      <div id="loginStatusMsg" class="status-msg" style="margin-top:14px;"></div>
+      <div id="recaptcha-container"></div>
+    </div>
+  </div>
+
+  <div id="homeScreen" style="display:none;">
     <div class="mode-grid">
       <button class="mode-card" id="goShopBtn">
         <div class="mode-icon">🏬</div>
@@ -647,24 +675,69 @@
     appId: "1:1085356934668:web:6109e4af2f1b073be35029",
     measurementId: "G-TMVV3LT39F"
   };
+  const ALLOWED_PHONES = ['+917984448750', '+919377742845'];
+
   let firestoreDb = null;
-  let firebaseAuthReady = null; // becomes a resolved Promise once signed in
+  let firebaseAuthReady = null; // becomes a resolved Promise once an authorized user is signed in
+  let recaptchaVerifier = null;
+  let otpConfirmationResult = null;
+
   try {
     if (typeof firebase !== 'undefined') {
       firebase.initializeApp(firebaseConfig);
       firestoreDb = firebase.firestore();
       firebaseAuthReady = new Promise((resolve) => {
         firebase.auth().onAuthStateChanged((user) => {
-          if (user) {
+          if (user && ALLOWED_PHONES.includes(user.phoneNumber)) {
             resolve(user);
+            showAuthorizedApp();
           } else {
-            firebase.auth().signInAnonymously().catch(() => resolve(null));
+            if (user) {
+              // Signed in but not an authorized number — kick them out.
+              firebase.auth().signOut();
+            }
+            showLoginScreen();
           }
         });
       });
+    } else {
+      showLoginScreen(); // Firebase didn't load — nothing to show but the login screen with an error
+      setTimeout(() => showStatusOnLogin('⚠️ Could not load login system — check your internet connection', true), 500);
     }
   } catch (e) {
-    firestoreDb = null; // Firebase SDK didn't load here (e.g. blocked in a chat preview) — app still works offline
+    firestoreDb = null;
+  }
+
+  function showStatusOnLogin(msg, isWarning) {
+    const el = document.getElementById('loginStatusMsg');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.color = isWarning ? '#b04a4a' : 'var(--good)';
+  }
+
+  function showLoginScreen() {
+    document.getElementById('loginScreen').style.display = 'block';
+    homeScreen.style.display = 'none';
+    tradeFairListScreen.style.display = 'none';
+    entryScreen.style.display = 'none';
+    document.getElementById('logoutBtn').style.display = 'none';
+  }
+
+  let appHasStarted = false;
+  function showAuthorizedApp() {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('logoutBtn').style.display = '';
+    if (!appHasStarted) {
+      appHasStarted = true;
+      startAppAfterLogin();
+    } else {
+      showScreen('home');
+    }
+  }
+
+  function setupRecaptcha() {
+    if (recaptchaVerifier || typeof firebase === 'undefined') return;
+    recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size: 'invisible' });
   }
 
   async function ensureFirebaseAuth() {
@@ -2823,9 +2896,93 @@
   backupModalCloseBtn.addEventListener('click', () => { backupModalOverlay.style.display = 'none'; });
   fyCancelBtn.addEventListener('click', () => { fyPickerOverlay.style.display = 'none'; });
 
-  Promise.all([loadEntries(), loadTradeFairs(), loadShopCounter(), loadTradeFairCounters(), loadCatalog(), loadFY(), loadCustomerDB()]).then(() => {
-    showScreen('home');
+  function startAppAfterLogin() {
+    Promise.all([loadEntries(), loadTradeFairs(), loadShopCounter(), loadTradeFairCounters(), loadCatalog(), loadFY(), loadCustomerDB()]).then(() => {
+      showScreen('home');
+    });
+  }
+
+  // ---------- Login (phone OTP) ----------
+  const loginPhoneInput = document.getElementById('loginPhoneInput');
+  const loginOtpInput = document.getElementById('loginOtpInput');
+  const loginPhoneStep = document.getElementById('loginPhoneStep');
+  const loginOtpStep = document.getElementById('loginOtpStep');
+  const sendOtpBtn = document.getElementById('sendOtpBtn');
+  const verifyOtpBtn = document.getElementById('verifyOtpBtn');
+  const resendOtpBtn = document.getElementById('resendOtpBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+
+  function sendOtp() {
+    const digits = loginPhoneInput.value.replace(/[^0-9]/g, '');
+    if (digits.length !== 10) {
+      showStatusOnLogin('⚠️ Enter a valid 10-digit mobile number', true);
+      return;
+    }
+    const fullPhone = '+91' + digits;
+    if (!ALLOWED_PHONES.includes(fullPhone)) {
+      showStatusOnLogin('⚠️ This number is not authorized to access this app', true);
+      return;
+    }
+    if (typeof firebase === 'undefined') {
+      showStatusOnLogin('⚠️ Login system not available — check your internet connection', true);
+      return;
+    }
+    setupRecaptcha();
+    sendOtpBtn.disabled = true;
+    showStatusOnLogin('Sending OTP…', false);
+    firebase.auth().signInWithPhoneNumber(fullPhone, recaptchaVerifier)
+      .then((result) => {
+        otpConfirmationResult = result;
+        loginPhoneStep.style.display = 'none';
+        loginOtpStep.style.display = 'block';
+        showStatusOnLogin('✓ OTP sent — check your SMS', false);
+        loginOtpInput.focus();
+        sendOtpBtn.disabled = false;
+      })
+      .catch((err) => {
+        sendOtpBtn.disabled = false;
+        showStatusOnLogin('⚠️ Could not send OTP — try again in a moment', true);
+        if (recaptchaVerifier) { recaptchaVerifier.render().then(id => { if (window.grecaptcha) window.grecaptcha.reset(id); }); }
+      });
+  }
+
+  function verifyOtp() {
+    const code = loginOtpInput.value.trim();
+    if (!code || !otpConfirmationResult) {
+      showStatusOnLogin('⚠️ Enter the OTP you received', true);
+      return;
+    }
+    verifyOtpBtn.disabled = true;
+    showStatusOnLogin('Verifying…', false);
+    otpConfirmationResult.confirm(code)
+      .then((result) => {
+        if (!ALLOWED_PHONES.includes(result.user.phoneNumber)) {
+          firebase.auth().signOut();
+          showStatusOnLogin('⚠️ This number is not authorized to access this app', true);
+        }
+        // If authorized, onAuthStateChanged fires automatically and shows the app.
+        verifyOtpBtn.disabled = false;
+      })
+      .catch((err) => {
+        verifyOtpBtn.disabled = false;
+        showStatusOnLogin('⚠️ Incorrect OTP — try again', true);
+      });
+  }
+
+  sendOtpBtn.addEventListener('click', sendOtp);
+  loginPhoneInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendOtp(); });
+  verifyOtpBtn.addEventListener('click', verifyOtp);
+  loginOtpInput.addEventListener('keydown', e => { if (e.key === 'Enter') verifyOtp(); });
+  resendOtpBtn.addEventListener('click', () => {
+    loginOtpStep.style.display = 'none';
+    loginPhoneStep.style.display = 'block';
+    loginOtpInput.value = '';
+    showStatusOnLogin('', false);
+  });
+  logoutBtn.addEventListener('click', () => {
+    if (typeof firebase !== 'undefined') firebase.auth().signOut();
   });
 </script>
 </body>
+
 </html>
