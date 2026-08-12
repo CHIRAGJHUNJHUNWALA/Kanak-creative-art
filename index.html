@@ -2941,8 +2941,10 @@
       })
       .catch((err) => {
         sendOtpBtn.disabled = false;
-        showStatusOnLogin('⚠️ Could not send OTP — try again in a moment', true);
-        if (recaptchaVerifier) { recaptchaVerifier.render().then(id => { if (window.grecaptcha) window.grecaptcha.reset(id); }); }
+        showStatusOnLogin(`⚠️ Could not send OTP — ${err.code || 'unknown error'}: ${err.message || ''}`, true);
+        console.error('OTP send error:', err);
+        // Reset recaptcha so the next attempt gets a fresh widget instead of a stuck one.
+        recaptchaVerifier = null;
       });
   }
 
@@ -2965,7 +2967,8 @@
       })
       .catch((err) => {
         verifyOtpBtn.disabled = false;
-        showStatusOnLogin('⚠️ Incorrect OTP — try again', true);
+        showStatusOnLogin(`⚠️ ${err.code === 'auth/invalid-verification-code' ? 'Incorrect OTP — try again' : (err.code || 'unknown error') + ': ' + (err.message || '')}`, true);
+        console.error('OTP verify error:', err);
       });
   }
 
