@@ -265,10 +265,11 @@
       <div id="addTradeFairForm" style="display:none; margin-bottom:16px; padding:14px; background: var(--bg); border-radius:8px; border:1px solid var(--line);">
         <div style="font-weight:600; font-size:13.5px; margin-bottom:10px;" id="tradeFairFormTitle">New Trade Fair</div>
         <div class="entry-row">
+          <div class="field"><label>Party Name</label><input type="text" id="newFairPartyName" placeholder="e.g. main customer at this fair"></div>
           <div class="field"><label>Trade Fair Name</label><input type="text" id="newFairName" placeholder="e.g. Surat Textile Expo"></div>
-          <div class="field"><label>City</label><input type="text" id="newFairCity" placeholder="e.g. Surat"></div>
         </div>
         <div class="entry-row" style="margin-top:10px;">
+          <div class="field"><label>City</label><input type="text" id="newFairCity" placeholder="e.g. Surat"></div>
           <div class="field"><label>Start Date</label><input type="date" id="newFairStartDate"></div>
           <div class="field"><label>End Date</label><input type="date" id="newFairEndDate"></div>
         </div>
@@ -506,6 +507,7 @@
   const showAddTradeFairBtn = document.getElementById('showAddTradeFairBtn');
   const addTradeFairForm = document.getElementById('addTradeFairForm');
   const tradeFairFormTitle = document.getElementById('tradeFairFormTitle');
+  const newFairPartyName = document.getElementById('newFairPartyName');
   const newFairName = document.getElementById('newFairName');
   const newFairCity = document.getElementById('newFairCity');
   const newFairStartDate = document.getElementById('newFairStartDate');
@@ -939,7 +941,7 @@
       const isPendingDelete = pendingDeleteFairId === f.id;
       return `<div class="fair-row" data-fair-id="${escapeHtml(f.id)}" style="cursor:default;">
         <div data-fair-enter="${escapeHtml(f.id)}" style="cursor:pointer; flex:1;">
-          <div class="fair-row-title">${escapeHtml(f.name)}</div>
+          <div class="fair-row-title">${escapeHtml(f.name)}${f.partyName ? ' — ' + escapeHtml(f.partyName) : ''}</div>
           <div class="fair-row-sub">${escapeHtml(f.city || '')}${dateLabel ? ' · ' + dateLabel : ''}${countLabel}</div>
         </div>
         <div style="display:flex; gap:6px; align-items:center;">
@@ -969,6 +971,7 @@
         if (!fair) return;
         editingFairId = id;
         tradeFairFormTitle.textContent = 'Edit Trade Fair';
+        newFairPartyName.value = fair.partyName || '';
         newFairName.value = fair.name || '';
         newFairCity.value = fair.city || '';
         newFairStartDate.value = fair.startDate || '';
@@ -1019,6 +1022,7 @@
     orderInput.value = '';
     showScreen('entry');
     render();
+    if (fair.partyName) document.getElementById('p-custName').value = fair.partyName;
   }
 
   function updateContextBar() {
@@ -1777,6 +1781,8 @@
             tradeFairId: currentTradeFair ? currentTradeFair.id : null,
             tradeFairName: currentTradeFair ? currentTradeFair.name : null,
             tradeFairCity: currentTradeFair ? currentTradeFair.city : null,
+            tradeFairStartDate: currentTradeFair ? currentTradeFair.startDate : null,
+            tradeFairEndDate: currentTradeFair ? currentTradeFair.endDate : null,
             time: now
           });
         });
@@ -1984,6 +1990,9 @@
     orderInput.value = (currentChannel === 'shop') ? String(getShopCounter()) : '';
     designRows.innerHTML = '';
     clearPartyDetailsForm();
+    if (currentChannel === 'tradefair' && currentTradeFair && currentTradeFair.partyName) {
+      document.getElementById('p-custName').value = currentTradeFair.partyName;
+    }
     addDesignRow(false);
     orderInput.focus();
   }
@@ -2040,6 +2049,8 @@
         tradeFairId: currentTradeFair ? currentTradeFair.id : null,
         tradeFairName: currentTradeFair ? currentTradeFair.name : null,
         tradeFairCity: currentTradeFair ? currentTradeFair.city : null,
+        tradeFairStartDate: currentTradeFair ? currentTradeFair.startDate : null,
+        tradeFairEndDate: currentTradeFair ? currentTradeFair.endDate : null,
         time: now
       };
       entries.unshift(entry);
@@ -2194,6 +2205,7 @@
   const BUSINESS_CONTACT_LINE = 'Ph.: 0261-2346045 &nbsp;·&nbsp; Mo.: 93777 42845, 79844 48750 &nbsp;·&nbsp; GSTIN: 24AAKPT5415C1ZV';
 
   function buildOrderPrintHtml(saved) {
+    const PRINT_FONT = "'Avenir', 'Avenir Next', 'Helvetica Neue', Helvetica, Arial, sans-serif";
     const p = saved.party || {};
     const isTradeFair = saved.items[0].channel === 'tradefair';
     const dateStr = new Date(saved.items[0].time).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -2207,21 +2219,26 @@
     const packing = saved.items[0].packing || '';
     const packingSurcharge = (packing === 'Pouch Pack' || packing === 'Box Pack');
     const packingBlock = packing
-      ? `<div style="margin-top:16px; font-size:13px;"><b>📦 Packing:</b> ${escapeHtml(packing)}${packingSurcharge ? ' <span style="color:#000000; text-decoration: underline;">(₹20/- will be added)</span>' : ''}</div>`
+      ? `<div style="margin-top:16px; font-size:13px;"><b>📦 Packing:</b> ${escapeHtml(packing)}${packingSurcharge ? ' <span style="color:#000000;">(₹20/- will be added)</span>' : ''}</div>`
       : '';
 
     if (isTradeFair) {
       const tfName = saved.items[0].tradeFairName || '';
       const tfCity = saved.items[0].tradeFairCity || '';
+      const fmtDate = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+      const tfStart = fmtDate(saved.items[0].tradeFairStartDate);
+      const tfEnd = fmtDate(saved.items[0].tradeFairEndDate);
+      const tfDateRange = (tfStart && tfEnd) ? `${tfStart} – ${tfEnd}` : (tfStart || tfEnd || '');
+      const fairLine = [tfName, tfCity, tfDateRange].filter(Boolean).join(' · ');
       return `<!DOCTYPE html><html><head><title>Order ${escapeHtml(saved.order)}</title>
         <style>
-          body { font-family: Georgia, 'Times New Roman', serif; padding: 30px 36px; color: #1a1a1a; }
-          .letterhead { text-align: center; border-bottom: 2px solid #1a1a1a; padding-bottom: 12px; margin-bottom: 14px; }
-          .party-name { font-size: 24px; font-weight: 700; letter-spacing: 0.02em; }
-          .fair-name { font-size: 15px; margin-top: 4px; }
-          .supplier-line { font-size: 12px; color: #555; margin-top: 6px; }
+          body { font-family: ${PRINT_FONT}; font-weight: 700; padding: 30px 36px; color: #1a1a1a; }
+          .letterhead { text-align: center; padding-bottom: 12px; margin-bottom: 14px; }
+          .party-name { font-size: 48px; font-weight: 700; letter-spacing: 0.02em; }
+          .fair-name { font-size: 15px; margin-top: 6px; font-weight: 700; }
+          .supplier-line { font-size: 14px; font-weight: 700; margin-top: 10px; }
           .info-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; flex-wrap: wrap; gap: 6px; }
-          .extra-party-line { font-size: 11.5px; color: #444; margin-bottom: 14px; }
+          .extra-party-line { font-size: 11.5px; margin-bottom: 14px; }
           table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
           th, td { border: 1px solid #1a1a1a; padding: 8px 10px; text-align: left; }
           th { background: #ffffff; font-weight: 700; }
@@ -2233,7 +2250,7 @@
         </style></head><body>
         <div class="letterhead">
           <div class="party-name">${escapeHtml(p.custName || '________________________')}</div>
-          <div class="fair-name">${escapeHtml(tfName)}${tfCity ? ' — ' + escapeHtml(tfCity) : ''}</div>
+          <div class="fair-name">${escapeHtml(fairLine)}</div>
           <div class="supplier-line">Supplier: ${escapeHtml(BUSINESS_NAME)}</div>
         </div>
         <div class="info-row">
@@ -2264,7 +2281,7 @@
     ].filter(Boolean).join(' &nbsp;·&nbsp; ');
     return `<!DOCTYPE html><html><head><title>Order ${escapeHtml(saved.order)}</title>
       <style>
-        body { font-family: Georgia, 'Times New Roman', serif; padding: 30px 36px; color: #1a1a1a; }
+        body { font-family: ${PRINT_FONT}; font-weight: 700; padding: 30px 36px; color: #1a1a1a; }
         .letterhead { text-align: center; border-bottom: 2px solid #1a1a1a; padding-bottom: 12px; margin-bottom: 14px; }
         .biz-name { font-size: 24px; font-weight: 700; letter-spacing: 0.02em; }
         .biz-tagline { font-size: 12px; letter-spacing: 0.08em; margin-top: 2px; }
@@ -2356,7 +2373,7 @@
     const html = `
       <!DOCTYPE html><html><head><title>Totals by Design</title>
       <style>
-        body { font-family: -apple-system, Arial, sans-serif; padding: 24px; color: #2a2420; }
+        body { font-family: 'Avenir', 'Avenir Next', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 700; padding: 24px; color: #2a2420; }
         h1 { font-size: 18px; margin-bottom: 4px; }
         .meta { color: #7a7168; font-size: 12px; margin-bottom: 18px; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -2701,6 +2718,7 @@
     editingFairId = null;
     tradeFairFormTitle.textContent = 'New Trade Fair';
     createTradeFairBtn.textContent = 'Create';
+    newFairPartyName.value = '';
     newFairName.value = '';
     newFairCity.value = '';
     newFairStartDate.value = '';
@@ -2710,13 +2728,14 @@
   showAddTradeFairBtn.addEventListener('click', () => {
     resetTradeFairForm();
     addTradeFairForm.style.display = 'block';
-    newFairName.focus();
+    newFairPartyName.focus();
   });
   cancelAddTradeFairBtn.addEventListener('click', () => {
     addTradeFairForm.style.display = 'none';
     resetTradeFairForm();
   });
   createTradeFairBtn.addEventListener('click', () => {
+    const partyName = newFairPartyName.value.trim();
     const name = newFairName.value.trim();
     const city = newFairCity.value.trim();
     const startDate = newFairStartDate.value;
@@ -2728,6 +2747,7 @@
     if (editingFairId) {
       const fair = tradeFairs.find(f => f.id === editingFairId);
       if (fair) {
+        fair.partyName = partyName;
         fair.name = name;
         fair.city = city;
         fair.startDate = startDate;
@@ -2743,7 +2763,7 @@
       renderTradeFairList();
       showStatus('✓ Trade fair updated', false);
     } else {
-      const fair = { id: Date.now() + '-' + Math.random().toString(36).slice(2, 6), name, city, startDate, endDate, createdAt: new Date().toISOString() };
+      const fair = { id: Date.now() + '-' + Math.random().toString(36).slice(2, 6), partyName, name, city, startDate, endDate, createdAt: new Date().toISOString() };
       tradeFairs.push(fair);
       saveTradeFairs();
       addTradeFairForm.style.display = 'none';
