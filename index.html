@@ -2195,6 +2195,63 @@
 
   function buildOrderPrintHtml(saved) {
     const p = saved.party || {};
+    const isTradeFair = saved.items[0].channel === 'tradefair';
+    const dateStr = new Date(saved.items[0].time).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    let itemRows = '';
+    saved.items.forEach((it, i) => {
+      const qtyParts = [];
+      if (it.sets > 0) qtyParts.push(it.sets + ' Sets');
+      if (it.pcs > 0) qtyParts.push(it.pcs + ' Pcs');
+      itemRows += `<tr><td>${i + 1}</td><td>${escapeHtml(it.design)}</td><td>${it.price ? '₹' + it.price.toLocaleString('en-IN') : '—'}</td><td>${escapeHtml(qtyParts.join(', ') || '—')}</td></tr>`;
+    });
+    const packing = saved.items[0].packing || '';
+    const packingSurcharge = (packing === 'Pouch Pack' || packing === 'Box Pack');
+    const packingBlock = packing
+      ? `<div style="margin-top:16px; font-size:13px;"><b>📦 Packing:</b> ${escapeHtml(packing)}${packingSurcharge ? ' <span style="color:#000000; text-decoration: underline;">(₹20/- will be added)</span>' : ''}</div>`
+      : '';
+
+    if (isTradeFair) {
+      const tfName = saved.items[0].tradeFairName || '';
+      const tfCity = saved.items[0].tradeFairCity || '';
+      return `<!DOCTYPE html><html><head><title>Order ${escapeHtml(saved.order)}</title>
+        <style>
+          body { font-family: Georgia, 'Times New Roman', serif; padding: 30px 36px; color: #1a1a1a; }
+          .letterhead { text-align: center; border-bottom: 2px solid #1a1a1a; padding-bottom: 12px; margin-bottom: 14px; }
+          .party-name { font-size: 24px; font-weight: 700; letter-spacing: 0.02em; }
+          .fair-name { font-size: 15px; margin-top: 4px; }
+          .supplier-line { font-size: 12px; color: #555; margin-top: 6px; }
+          .info-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; flex-wrap: wrap; gap: 6px; }
+          .extra-party-line { font-size: 11.5px; color: #444; margin-bottom: 14px; }
+          table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+          th, td { border: 1px solid #1a1a1a; padding: 8px 10px; text-align: left; }
+          th { background: #ffffff; font-weight: 700; }
+          td:nth-child(1) { width: 40px; text-align:center; }
+          td:nth-child(3), td:nth-child(4) { text-align: right; }
+          .sign-row { display: flex; justify-content: space-between; margin-top: 60px; font-size: 13px; }
+          .sign-box { text-align: center; min-width: 200px; }
+          .sign-line { border-top: 1px solid #1a1a1a; margin-bottom: 4px; padding-top: 4px; }
+        </style></head><body>
+        <div class="letterhead">
+          <div class="party-name">${escapeHtml(p.custName || '________________________')}</div>
+          <div class="fair-name">${escapeHtml(tfName)}${tfCity ? ' — ' + escapeHtml(tfCity) : ''}</div>
+          <div class="supplier-line">Supplier: ${escapeHtml(BUSINESS_NAME)}</div>
+        </div>
+        <div class="info-row">
+          <span><b>Sr. No.:</b> ${escapeHtml(saved.order)}</span>
+          <span><b>Date:</b> ${dateStr}</span>
+        </div>
+        <table>
+          <thead><tr><th>NO.</th><th>DESIGN NO.</th><th>RATE</th><th>QTY</th></tr></thead>
+          <tbody>${itemRows}</tbody>
+        </table>
+        ${packingBlock}
+        <div class="sign-row">
+          <div class="sign-box"><div class="sign-line">Party's Signature</div></div>
+          <div class="sign-box"><div class="sign-line">For, ${escapeHtml(BUSINESS_NAME)}</div></div>
+        </div>
+        </body></html>`;
+    }
+
     const extraPartyLine = [
       p.custPhone ? `Mo.: ${p.custPhone}` : '',
       p.agent ? `Agent: ${p.agent}` : '',
@@ -2205,17 +2262,6 @@
       p.expo ? `Export To: ${p.expo}` : '',
       p.remarks ? `Remarks: ${p.remarks}` : ''
     ].filter(Boolean).join(' &nbsp;·&nbsp; ');
-    const dateStr = new Date(saved.items[0].time).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-    let itemRows = '';
-    let grandTotal = 0;
-    saved.items.forEach((it, i) => {
-      const qtyParts = [];
-      if (it.sets > 0) qtyParts.push(it.sets + ' Sets');
-      if (it.pcs > 0) qtyParts.push(it.pcs + ' Pcs');
-      const lineTotal = (it.sets + (it.pcs || 0)) * (it.price || 0);
-      grandTotal += lineTotal;
-      itemRows += `<tr><td>${i + 1}</td><td>${escapeHtml(it.design)}</td><td>${it.price ? '₹' + it.price.toLocaleString('en-IN') : '—'}</td><td>${escapeHtml(qtyParts.join(', ') || '—')}</td></tr>`;
-    });
     return `<!DOCTYPE html><html><head><title>Order ${escapeHtml(saved.order)}</title>
       <style>
         body { font-family: Georgia, 'Times New Roman', serif; padding: 30px 36px; color: #1a1a1a; }
@@ -2228,10 +2274,9 @@
         .extra-party-line { font-size: 11.5px; color: #444; margin-bottom: 14px; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
         th, td { border: 1px solid #1a1a1a; padding: 8px 10px; text-align: left; }
-        th { background: #f0e8dc; }
+        th { background: #ffffff; font-weight: 700; }
         td:nth-child(1) { width: 40px; text-align:center; }
         td:nth-child(3), td:nth-child(4) { text-align: right; }
-        .grand { text-align: right; font-weight: 700; margin-top: 10px; font-size: 14px; }
         .sign-row { display: flex; justify-content: space-between; margin-top: 60px; font-size: 13px; }
         .sign-box { text-align: center; min-width: 200px; }
         .sign-line { border-top: 1px solid #1a1a1a; margin-bottom: 4px; padding-top: 4px; }
@@ -2248,11 +2293,11 @@
         <span><b>M/s.:</b> ${escapeHtml(p.custName || '________________________')}</span>
       </div>
       ${extraPartyLine ? `<div class="extra-party-line">${extraPartyLine}</div>` : ''}
-      ${saved.items[0].packing ? `<div class="extra-party-line"><b>Packing:</b> ${escapeHtml(saved.items[0].packing)}</div>` : ''}
       <table>
         <thead><tr><th>NO.</th><th>DESIGN NO.</th><th>RATE</th><th>QTY</th></tr></thead>
         <tbody>${itemRows}</tbody>
       </table>
+      ${packingBlock}
       <div class="sign-row">
         <div class="sign-box"><div class="sign-line">Party's Signature</div></div>
         <div class="sign-box"><div class="sign-line">For, ${escapeHtml(BUSINESS_NAME)}</div></div>
@@ -2316,7 +2361,7 @@
         .meta { color: #7a7168; font-size: 12px; margin-bottom: 18px; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
         th, td { padding: 7px 10px; border-bottom: 1px solid #ddd; text-align: left; }
-        th { background: #f0ddd0; color: #2a2420; }
+        th { background: #ffffff; color: #000000; font-weight: 700; }
       </style></head><body>
       <h1>Totals by Design</h1>
       <div class="meta">Generated ${new Date().toLocaleString()}</div>
