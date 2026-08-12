@@ -1798,6 +1798,7 @@
             tradeFairCity: currentTradeFair ? currentTradeFair.city : null,
             tradeFairStartDate: currentTradeFair ? currentTradeFair.startDate : null,
             tradeFairEndDate: currentTradeFair ? currentTradeFair.endDate : null,
+            tradeFairPartyName: currentTradeFair ? currentTradeFair.partyName : null,
             time: now
           });
         });
@@ -2082,6 +2083,7 @@
         tradeFairCity: currentTradeFair ? currentTradeFair.city : null,
         tradeFairStartDate: currentTradeFair ? currentTradeFair.startDate : null,
         tradeFairEndDate: currentTradeFair ? currentTradeFair.endDate : null,
+        tradeFairPartyName: currentTradeFair ? currentTradeFair.partyName : null,
         time: now
       };
       entries.unshift(entry);
@@ -2260,6 +2262,7 @@
       : '';
 
     if (isTradeFair) {
+      const hostName = saved.items[0].tradeFairPartyName || '';
       const tfName = saved.items[0].tradeFairName || '';
       const tfCity = saved.items[0].tradeFairCity || '';
       const fmtDate = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
@@ -2286,13 +2289,14 @@
           .sign-line { border-top: 1px solid #1a1a1a; margin-bottom: 4px; padding-top: 4px; }
         </style></head><body>
         <div class="letterhead">
-          <div class="party-name">${escapeHtml(p.custName || '________________________')}</div>
+          <div class="party-name">${escapeHtml(hostName || tfName || '________________________')}</div>
           <div class="fair-name">${escapeHtml(fairLine)}</div>
           <div class="supplier-line">Supplier: ${escapeHtml(BUSINESS_NAME)}</div>
         </div>
         <div class="info-row">
           <span><b>Sr. No.:</b> ${escapeHtml(saved.order)}</span>
           <span><b>Date:</b> ${dateStr}</span>
+          <span><b>M/s.:</b> ${escapeHtml(p.custName || '________________________')}</span>
         </div>
         <table>
           <thead><tr><th>NO.</th><th>DESIGN NO.</th><th>RATE</th><th>QTY</th></tr></thead>
