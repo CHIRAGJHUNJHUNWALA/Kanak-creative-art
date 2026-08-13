@@ -2479,17 +2479,18 @@
       searchResultsWrap.innerHTML = '';
       return;
     }
-    const matches = getScopedEntries().filter(e => e.design.toLowerCase() === q);
+    const matches = getScopedEntries().filter(e => e.design.toLowerCase().includes(q));
     if (matches.length === 0) {
       searchResultsWrap.innerHTML = `<div class="empty-state">No orders found for design "${escapeHtml(searchInput.value.trim())}".</div>`;
       return;
     }
+    const uniqueDesigns = new Set(matches.map(e => e.design)).size;
     const totalSets = matches.reduce((s, e) => s + e.sets, 0);
     const totalPcs = matches.reduce((s, e) => s + (e.pcs || 0), 0);
-    let html = `<div class="stat" style="margin-bottom:12px;"><div class="stat-value">${matches.length}</div><div class="stat-label">Orders containing this design — ${totalSets} total sets${totalPcs > 0 ? ', ' + totalPcs + ' total pcs' : ''}</div></div>`;
-    html += '<table><thead><tr><th>Order #</th><th class="num">Sets</th><th class="num">Pcs</th></tr></thead><tbody>';
+    let html = `<div class="stat" style="margin-bottom:12px;"><div class="stat-value">${matches.length}</div><div class="stat-label">Orders matching "${escapeHtml(searchInput.value.trim())}"${uniqueDesigns > 1 ? ' across ' + uniqueDesigns + ' designs' : ''} — ${totalSets} total sets${totalPcs > 0 ? ', ' + totalPcs + ' total pcs' : ''}</div></div>`;
+    html += '<table><thead><tr><th>Design</th><th>Order #</th><th class="num">Sets</th><th class="num">Pcs</th></tr></thead><tbody>';
     matches.forEach(e => {
-      html += `<tr><td>${escapeHtml(e.order || '—')}</td><td class="num">${e.sets}</td><td class="num">${e.pcs || 0}</td></tr>`;
+      html += `<tr><td>${escapeHtml(e.design)}</td><td>${escapeHtml(e.order || '—')}</td><td class="num">${e.sets}</td><td class="num">${e.pcs || 0}</td></tr>`;
     });
     html += '</tbody></table>';
     searchResultsWrap.innerHTML = html;
@@ -2884,6 +2885,7 @@
   clearBtn.addEventListener('click', handleClearAll);
   searchBtn.addEventListener('click', runSearch);
   searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') runSearch(); });
+  searchInput.addEventListener('input', runSearch);
   searchClearBtn.addEventListener('click', () => { searchInput.value = ''; searchResultsWrap.innerHTML = ''; });
 
   catalogUploadBtn.addEventListener('click', () => catalogFileInput.click());
