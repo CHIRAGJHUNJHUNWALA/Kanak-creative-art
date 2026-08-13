@@ -319,43 +319,55 @@
       <button class="btn-secondary btn-tiny" id="switchContextBtn">Switch</button>
     </div>
 
-    <div class="card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding:14px 18px;">
-      <div>
-        <div style="font-size:11px; color: var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Design Catalog</div>
-        <div style="font-size:16px; font-weight:700; color: var(--accent);" id="catalogCount">0 designs</div>
-        <div style="font-size:11px; color: var(--muted); margin-top:2px;" id="catalogSummary"></div>
-      </div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="btn-add btn-tiny" id="catalogUploadBtn">Upload / Update List</button>
-        <button class="btn-secondary btn-tiny" id="clearCatalogBtn">Clear</button>
-      </div>
-      <input type="file" id="catalogFileInput" accept=".xlsx,.xls" style="display:none;">
-    </div>
+    <div class="card" style="padding: 0;">
+      <details id="databasesToggle">
+        <summary style="cursor:pointer; padding:14px 18px; font-weight:700; font-size:14px; display:flex; justify-content:space-between; align-items:center;">
+          <span>📚 Databases</span>
+          <span style="font-size:11px; color: var(--muted); font-weight:400;" id="databasesSummaryLine">Design Catalog · Customer Database · Haste Database</span>
+        </summary>
+        <div style="padding: 0 18px 16px;">
 
-    <div class="card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding:14px 18px;">
-      <div>
-        <div style="font-size:11px; color: var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Customer Database</div>
-        <div style="font-size:16px; font-weight:700; color: var(--accent);" id="customerDBCount">0 customers</div>
-        <div style="font-size:11px; color: var(--muted); margin-top:2px;" id="customerDBSummary"></div>
-      </div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="btn-add btn-tiny" id="customerDBUploadBtn">Upload / Update List</button>
-        <button class="btn-secondary btn-tiny" id="clearCustomerDBBtn">Clear</button>
-      </div>
-      <input type="file" id="customerDBFileInput" accept=".xlsx,.xls" style="display:none;">
-    </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding:12px 0; border-top:1px solid var(--line);">
+            <div>
+              <div style="font-size:11px; color: var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Design Catalog</div>
+              <div style="font-size:15px; font-weight:700; color: var(--accent);" id="catalogCount">0 designs</div>
+              <div style="font-size:11px; color: var(--muted); margin-top:2px;" id="catalogSummary"></div>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn-add btn-tiny" id="catalogUploadBtn">Upload / Update List</button>
+              <button class="btn-secondary btn-tiny" id="clearCatalogBtn">Clear</button>
+            </div>
+            <input type="file" id="catalogFileInput" accept=".xlsx,.xls" style="display:none;">
+          </div>
 
-    <div class="card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding:14px 18px;">
-      <div>
-        <div style="font-size:11px; color: var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Haste Database</div>
-        <div style="font-size:16px; font-weight:700; color: var(--accent);" id="hasteDBCount">0 entries</div>
-        <div style="font-size:11px; color: var(--muted); margin-top:2px;" id="hasteDBSummary"></div>
-      </div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="btn-add btn-tiny" id="hasteDBUploadBtn">Upload / Update List</button>
-        <button class="btn-secondary btn-tiny" id="clearHasteDBBtn">Clear</button>
-      </div>
-      <input type="file" id="hasteDBFileInput" accept=".xlsx,.xls" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding:12px 0; border-top:1px solid var(--line);">
+            <div>
+              <div style="font-size:11px; color: var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Customer Database</div>
+              <div style="font-size:15px; font-weight:700; color: var(--accent);" id="customerDBCount">0 customers</div>
+              <div style="font-size:11px; color: var(--muted); margin-top:2px;" id="customerDBSummary"></div>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn-add btn-tiny" id="customerDBUploadBtn">Upload / Update List</button>
+              <button class="btn-secondary btn-tiny" id="clearCustomerDBBtn">Clear</button>
+            </div>
+            <input type="file" id="customerDBFileInput" accept=".xlsx,.xls" style="display:none;">
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding:12px 0; border-top:1px solid var(--line);">
+            <div>
+              <div style="font-size:11px; color: var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Haste Database</div>
+              <div style="font-size:15px; font-weight:700; color: var(--accent);" id="hasteDBCount">0 entries</div>
+              <div style="font-size:11px; color: var(--muted); margin-top:2px;" id="hasteDBSummary"></div>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn-add btn-tiny" id="hasteDBUploadBtn">Upload / Update List</button>
+              <button class="btn-secondary btn-tiny" id="clearHasteDBBtn">Clear</button>
+            </div>
+            <input type="file" id="hasteDBFileInput" accept=".xlsx,.xls" style="display:none;">
+          </div>
+
+        </div>
+      </details>
     </div>
 
     <div class="card">
@@ -2105,7 +2117,8 @@
     designRows.appendChild(row);
     const removeBtn = row.querySelector('[data-remove]');
     removeBtn.addEventListener('click', () => {
-      if (designRows.children.length > 1) row.remove();
+      row.remove();
+      if (designRows.children.length === 0) addDesignRow(true);
     });
     const dField = row.querySelector('.design-field');
     const sField = row.querySelector('.sets-field');
