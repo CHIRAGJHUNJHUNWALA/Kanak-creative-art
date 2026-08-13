@@ -2532,6 +2532,8 @@
       ? `<div style="margin-top:16px; font-size:13px;"><b>📦 Packing:</b> ${escapeHtml(packing)}${packingSurcharge ? ' <span style="color:#000000;">(₹20/- will be added)</span>' : ''}</div>`
       : '';
 
+    let styleBlock, copyContent;
+
     if (isTradeFair) {
       const hostName = saved.items[0].tradeFairPartyName || '';
       const tfName = saved.items[0].tradeFairName || '';
@@ -2541,23 +2543,13 @@
       const tfEnd = fmtDate(saved.items[0].tradeFairEndDate);
       const tfDateRange = (tfStart && tfEnd) ? `${tfStart} – ${tfEnd}` : (tfStart || tfEnd || '');
       const fairLine = [tfName, tfCity, tfDateRange].filter(Boolean).join(' · ');
-      return `<!DOCTYPE html><html><head><title>Order ${escapeHtml(saved.order)}</title>
-        <style>
-          body { font-family: ${PRINT_FONT}; font-weight: 700; padding: 30px 36px; color: #1a1a1a; }
+      styleBlock = `
           .letterhead { text-align: center; padding-bottom: 12px; margin-bottom: 14px; }
           .party-name { font-size: 32px; font-weight: 700; letter-spacing: 0.02em; }
           .fair-name { font-size: 15px; margin-top: 6px; font-weight: 700; }
           .supplier-line { font-size: 32px; font-weight: 700; margin-top: 14px; padding-top: 14px; margin-bottom: 22px; text-transform: uppercase; border-top: 1px solid #1a1a1a; }
-          .info-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; flex-wrap: wrap; gap: 6px; font-weight: 700; }
-          table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
-          th, td { border: 1px solid #1a1a1a; padding: 8px 10px; text-align: left; }
-          th { background: #ffffff; font-weight: 700; }
-          td:nth-child(1) { width: 40px; text-align:center; }
-          td:nth-child(3), td:nth-child(4) { text-align: right; }
-          .sign-row { display: flex; justify-content: space-between; margin-top: 60px; font-size: 13px; }
-          .sign-box { text-align: center; min-width: 200px; }
-          .sign-line { border-top: 1px solid #1a1a1a; margin-bottom: 4px; padding-top: 4px; }
-        </style></head><body>
+          .info-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; flex-wrap: wrap; gap: 6px; font-weight: 700; }`;
+      copyContent = `
         <div class="letterhead">
           <div class="party-name">${escapeHtml(hostName || tfName || '________________________')}</div>
           <div class="fair-name">${escapeHtml(fairLine)}</div>
@@ -2581,30 +2573,53 @@
         <div class="sign-row">
           <div class="sign-box"><div class="sign-line">Party's Signature</div></div>
           <div class="sign-box"><div class="sign-line">For, ${escapeHtml(BUSINESS_NAME)}</div></div>
+        </div>`;
+    } else {
+      const extraPartyLine = [
+        p.custPhone ? `Mo.: ${p.custPhone}` : '',
+        p.agent ? `Agent: ${p.agent}` : '',
+        p.gstin ? `GSTIN: ${p.gstin}` : '',
+        p.transport ? `Transport: ${p.transport}` : '',
+        p.station ? `Station: ${p.station}` : '',
+        p.consignee ? `Consignee: ${p.consignee}` : '',
+        p.expo ? `Export To: ${p.expo}` : '',
+        p.remarks ? `Remarks: ${p.remarks}` : ''
+      ].filter(Boolean).join(' &nbsp;·&nbsp; ');
+      styleBlock = `
+          .letterhead { text-align: center; border-bottom: 2px solid #1a1a1a; padding-bottom: 12px; margin-bottom: 14px; }
+          .biz-name { font-size: 24px; font-weight: 700; letter-spacing: 0.02em; }
+          .biz-tagline { font-size: 12px; letter-spacing: 0.08em; margin-top: 2px; }
+          .biz-address { font-size: 12px; margin-top: 6px; }
+          .biz-contact { font-size: 12px; margin-top: 2px; }
+          .info-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; flex-wrap: wrap; gap: 6px; }
+          .extra-party-line { font-size: 11.5px; color: #444; margin-bottom: 14px; }`;
+      copyContent = `
+        <div class="letterhead">
+          <div class="biz-name">${escapeHtml(BUSINESS_NAME)}</div>
+          <div class="biz-tagline">${escapeHtml(BUSINESS_TAGLINE)}</div>
+          <div class="biz-address">${escapeHtml(BUSINESS_ADDRESS)}</div>
+          <div class="biz-contact">${BUSINESS_CONTACT_LINE}</div>
         </div>
-        </body></html>`;
+        <div class="info-row">
+          <span><b>Sr. No.:</b> ${escapeHtml(saved.order)}</span>
+          <span><b>Date:</b> ${dateStr}</span>
+          <span><b>M/s.:</b> ${escapeHtml(p.custName || '________________________')}</span>
+        </div>
+        ${extraPartyLine ? `<div class="extra-party-line">${extraPartyLine}</div>` : ''}
+        <table>
+          <thead><tr><th>NO.</th><th>DESIGN NO.</th><th>RATE</th><th>QTY</th></tr></thead>
+          <tbody>${itemRows}</tbody>
+        </table>
+        ${packingBlock}
+        <div class="sign-row">
+          <div class="sign-box"><div class="sign-line">Party's Signature</div></div>
+          <div class="sign-box"><div class="sign-line">For, ${escapeHtml(BUSINESS_NAME)}</div></div>
+        </div>`;
     }
 
-    const extraPartyLine = [
-      p.custPhone ? `Mo.: ${p.custPhone}` : '',
-      p.agent ? `Agent: ${p.agent}` : '',
-      p.gstin ? `GSTIN: ${p.gstin}` : '',
-      p.transport ? `Transport: ${p.transport}` : '',
-      p.station ? `Station: ${p.station}` : '',
-      p.consignee ? `Consignee: ${p.consignee}` : '',
-      p.expo ? `Export To: ${p.expo}` : '',
-      p.remarks ? `Remarks: ${p.remarks}` : ''
-    ].filter(Boolean).join(' &nbsp;·&nbsp; ');
     return `<!DOCTYPE html><html><head><title>Order ${escapeHtml(saved.order)}</title>
       <style>
         body { font-family: ${PRINT_FONT}; font-weight: 700; padding: 30px 36px; color: #1a1a1a; }
-        .letterhead { text-align: center; border-bottom: 2px solid #1a1a1a; padding-bottom: 12px; margin-bottom: 14px; }
-        .biz-name { font-size: 24px; font-weight: 700; letter-spacing: 0.02em; }
-        .biz-tagline { font-size: 12px; letter-spacing: 0.08em; margin-top: 2px; }
-        .biz-address { font-size: 12px; margin-top: 6px; }
-        .biz-contact { font-size: 12px; margin-top: 2px; }
-        .info-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; flex-wrap: wrap; gap: 6px; }
-        .extra-party-line { font-size: 11.5px; color: #444; margin-bottom: 14px; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
         th, td { border: 1px solid #1a1a1a; padding: 8px 10px; text-align: left; }
         th { background: #ffffff; font-weight: 700; }
@@ -2613,28 +2628,15 @@
         .sign-row { display: flex; justify-content: space-between; margin-top: 60px; font-size: 13px; }
         .sign-box { text-align: center; min-width: 200px; }
         .sign-line { border-top: 1px solid #1a1a1a; margin-bottom: 4px; padding-top: 4px; }
+        .copy-label { text-align: right; font-size: 11px; letter-spacing: 0.08em; color: #555; margin-bottom: 8px; text-transform: uppercase; }
+        .copy-break { page-break-after: always; }
+        ${styleBlock}
       </style></head><body>
-      <div class="letterhead">
-        <div class="biz-name">${escapeHtml(BUSINESS_NAME)}</div>
-        <div class="biz-tagline">${escapeHtml(BUSINESS_TAGLINE)}</div>
-        <div class="biz-address">${escapeHtml(BUSINESS_ADDRESS)}</div>
-        <div class="biz-contact">${BUSINESS_CONTACT_LINE}</div>
-      </div>
-      <div class="info-row">
-        <span><b>Sr. No.:</b> ${escapeHtml(saved.order)}</span>
-        <span><b>Date:</b> ${dateStr}</span>
-        <span><b>M/s.:</b> ${escapeHtml(p.custName || '________________________')}</span>
-      </div>
-      ${extraPartyLine ? `<div class="extra-party-line">${extraPartyLine}</div>` : ''}
-      <table>
-        <thead><tr><th>NO.</th><th>DESIGN NO.</th><th>RATE</th><th>QTY</th></tr></thead>
-        <tbody>${itemRows}</tbody>
-      </table>
-      ${packingBlock}
-      <div class="sign-row">
-        <div class="sign-box"><div class="sign-line">Party's Signature</div></div>
-        <div class="sign-box"><div class="sign-line">For, ${escapeHtml(BUSINESS_NAME)}</div></div>
-      </div>
+      <div class="copy-label">Office Copy</div>
+      ${copyContent}
+      <div class="copy-break"></div>
+      <div class="copy-label">Buyer's Copy</div>
+      ${copyContent}
       </body></html>`;
   }
 
@@ -2652,6 +2654,7 @@
 
   postSavePrintBtn.addEventListener('click', () => {
     if (lastSavedOrder) printOrderForm(lastSavedOrder);
+    closePostSaveModal();
   });
   postSaveWhatsAppBtn.addEventListener('click', () => {
     whatsAppShareForm.style.display = 'block';
