@@ -345,6 +345,19 @@
       <input type="file" id="customerDBFileInput" accept=".xlsx,.xls" style="display:none;">
     </div>
 
+    <div class="card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding:14px 18px;">
+      <div>
+        <div style="font-size:11px; color: var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Haste Database</div>
+        <div style="font-size:16px; font-weight:700; color: var(--accent);" id="hasteDBCount">0 entries</div>
+        <div style="font-size:11px; color: var(--muted); margin-top:2px;" id="hasteDBSummary"></div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn-add btn-tiny" id="hasteDBUploadBtn">Upload / Update List</button>
+        <button class="btn-secondary btn-tiny" id="clearHasteDBBtn">Clear</button>
+      </div>
+      <input type="file" id="hasteDBFileInput" accept=".xlsx,.xls" style="display:none;">
+    </div>
+
     <div class="card">
       <div class="field" style="max-width: 260px; margin-bottom: 14px;">
         <label for="orderInput">Order Number <span style="color:#b04a4a;">*</span></label>
@@ -353,7 +366,8 @@
 
       <div style="margin-bottom: 14px;">
         <div style="font-weight:600; font-size:13.5px; color: var(--muted); margin-bottom:12px;">Party Details</div>
-        <div>
+
+        <div id="shopPartyFieldsWrap">
           <div class="entry-row">
             <div class="field" style="position:relative;">
               <label>M/s. (Party Name)</label>
@@ -379,6 +393,21 @@
           <div class="entry-row" style="margin-top:10px;">
             <div class="field"><label>Export To</label><input type="text" id="p-expo"></div>
             <div class="field"><label>Remarks</label><input type="text" id="p-remarks" placeholder="Notes for this whole order"></div>
+          </div>
+        </div>
+
+        <div id="tradeFairPartyFieldsWrap" style="display:none;">
+          <div class="entry-row">
+            <div class="field" style="position:relative;">
+              <label>Haste</label>
+              <input type="text" id="tf-haste" placeholder="Haste" autocomplete="off">
+              <div id="hasteSuggestions" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--card); border:1px solid var(--line); border-radius:8px; margin-top:4px; z-index:50; max-height:180px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
+            </div>
+            <div class="field"><label>Contact</label><input type="text" id="tf-contact" placeholder="98xxxxxxxx"></div>
+          </div>
+          <div class="entry-row" style="margin-top:10px;">
+            <div class="field"><label>City</label><input type="text" id="tf-city"></div>
+            <div class="field"><label>Transport</label><input type="text" id="tf-transport"></div>
           </div>
         </div>
       </div>
@@ -502,6 +531,9 @@
   const CUSTOMER_DB_KEY = 'customer-database-v1';
   let customerDB = []; // [{name, gst, mobile, state, city}]
   let customerDBUpdatedAt = null;
+  const HASTE_DB_KEY = 'haste-database-v1';
+  let hasteDB = []; // [{haste, contact, city, transport}]
+  let hasteDBUpdatedAt = null;
   const TRADE_FAIRS_KEY = 'trade-fairs-v1';
   const SHOP_COUNTER_KEY = 'shop-order-counter-v1';
   const TRADE_FAIR_COUNTER_KEY = 'trade-fair-order-counter-v1';
@@ -568,13 +600,36 @@
   const customerDBFileInput = document.getElementById('customerDBFileInput');
   const clearCustomerDBBtn = document.getElementById('clearCustomerDBBtn');
   const custNameSuggestions = document.getElementById('custNameSuggestions');
+  const hasteDBCount = document.getElementById('hasteDBCount');
+  const hasteDBSummary = document.getElementById('hasteDBSummary');
+  const hasteDBUploadBtn = document.getElementById('hasteDBUploadBtn');
+  const hasteDBFileInput = document.getElementById('hasteDBFileInput');
+  const clearHasteDBBtn = document.getElementById('clearHasteDBBtn');
+  const hasteSuggestions = document.getElementById('hasteSuggestions');
   const catalogSummary = document.getElementById('catalogSummary');
   const catalogCount = document.getElementById('catalogCount');
   const clearCatalogBtn = document.getElementById('clearCatalogBtn');
   const cameraToggleBtn = document.getElementById('cameraToggleBtn');
   const gunScanInput = document.getElementById('gunScanInput');
   const partyFieldIds = ['p-custName', 'p-custPhone', 'p-haste', 'p-agent', 'p-gstin', 'p-state', 'p-city', 'p-consignee', 'p-transport', 'p-station', 'p-expo', 'p-remarks'];
+  const tradeFairPartyFieldIds = ['tf-haste', 'tf-contact', 'tf-city', 'tf-transport'];
   function getPartyDetailsFromForm() {
+    if (currentChannel === 'tradefair') {
+      return {
+        custName: '',
+        custPhone: document.getElementById('tf-contact').value.trim(),
+        haste: document.getElementById('tf-haste').value.trim(),
+        agent: '',
+        gstin: '',
+        state: '',
+        city: document.getElementById('tf-city').value.trim(),
+        consignee: '',
+        transport: document.getElementById('tf-transport').value.trim(),
+        station: '',
+        expo: '',
+        remarks: ''
+      };
+    }
     return {
       custName: document.getElementById('p-custName').value.trim(),
       custPhone: document.getElementById('p-custPhone').value.trim(),
@@ -592,6 +647,19 @@
   }
   function clearPartyDetailsForm() {
     partyFieldIds.forEach(id => { document.getElementById(id).value = ''; });
+    tradeFairPartyFieldIds.forEach(id => { document.getElementById(id).value = ''; });
+  }
+  function updatePartyFieldsVisibility() {
+    const shopWrap = document.getElementById('shopPartyFieldsWrap');
+    const tfWrap = document.getElementById('tradeFairPartyFieldsWrap');
+    if (!shopWrap || !tfWrap) return;
+    if (currentChannel === 'tradefair') {
+      shopWrap.style.display = 'none';
+      tfWrap.style.display = 'block';
+    } else {
+      shopWrap.style.display = 'block';
+      tfWrap.style.display = 'none';
+    }
   }
   function isPartyDetailsEmpty(p) {
     if (!p) return true;
@@ -1101,6 +1169,7 @@
     currentChannel = 'shop';
     currentTradeFair = null;
     orderInput.value = String(getShopCounter());
+    updatePartyFieldsVisibility();
     showScreen('entry');
     render();
   }
@@ -1109,6 +1178,7 @@
     currentChannel = 'tradefair';
     currentTradeFair = fair;
     orderInput.value = String(getTradeFairCounter(fair.id));
+    updatePartyFieldsVisibility();
     showScreen('entry');
     render();
   }
@@ -1305,6 +1375,64 @@
     reader.readAsArrayBuffer(file);
   }
 
+  // ---------- Haste Database ----------
+  async function loadHasteDB() {
+    const raw = await loadData(HASTE_DB_KEY, true, { entries: [], updatedAt: null });
+    hasteDB = raw.entries || [];
+    hasteDBUpdatedAt = raw.updatedAt || null;
+    renderHasteDBUI();
+  }
+
+  async function saveHasteDB() {
+    hasteDBUpdatedAt = new Date().toISOString();
+    await persistData(HASTE_DB_KEY, { entries: hasteDB, updatedAt: hasteDBUpdatedAt }, true);
+  }
+
+  function renderHasteDBUI() {
+    hasteDBCount.textContent = `${hasteDB.length} entr${hasteDB.length === 1 ? 'y' : 'ies'}`;
+    hasteDBSummary.textContent = hasteDB.length > 0
+      ? (hasteDBUpdatedAt ? `Last updated: ${formatUpdatedAt(hasteDBUpdatedAt)}` : '')
+      : 'No haste list uploaded yet';
+  }
+
+  function handleHasteDBUpload(file) {
+    if (typeof XLSX === 'undefined') {
+      showStatus('⚠️ Excel library still loading — try again in a moment', true);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type: 'array' });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const rows = sheetToObjectsAutoHeader(sheet, ['haste', 'haste name']);
+        const parsed = [];
+        let skipped = 0;
+        rows.forEach(r => {
+          const haste = getFieldFromRow(r, 'Haste', 'Haste Name', 'Haste_Name').toString().trim();
+          const contact = getFieldFromRow(r, 'Contact', 'Mobile', 'Mo.', 'Phone', 'Contact_No').toString().trim();
+          const city = getFieldFromRow(r, 'City', 'City_Name').toString().trim();
+          const transport = getFieldFromRow(r, 'Transport', 'Transport_Name').toString().trim();
+          if (!haste) { skipped++; return; }
+          parsed.push({ haste, contact, city, transport });
+        });
+        if (parsed.length === 0) {
+          showStatus('⚠️ No valid rows found — check for a "Haste" column', true);
+          return;
+        }
+        hasteDB = parsed;
+        saveHasteDB();
+        renderHasteDBUI();
+        hasteDBSummary.textContent = `Imported ${parsed.length} entries${skipped ? `, ${skipped} skipped (no haste)` : ''}. Last updated: ${formatUpdatedAt(hasteDBUpdatedAt)}.`;
+        showStatus(`✓ Haste database updated: ${parsed.length} entries`, false);
+      } catch (err) {
+        showStatus('⚠️ Could not read that file — make sure it\'s a valid Excel export', true);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
   let currentSuggestionMatches = [];
   let highlightedSuggestionIndex = -1;
 
@@ -1362,6 +1490,63 @@
       });
     });
     custNameSuggestions.style.display = 'block';
+  }
+
+  let hasteSuggestionMatches = [];
+  let hasteHighlightedIndex = -1;
+
+  function selectHaste(h) {
+    document.getElementById('tf-haste').value = h.haste;
+    document.getElementById('tf-contact').value = h.contact || '';
+    document.getElementById('tf-city').value = h.city || '';
+    document.getElementById('tf-transport').value = h.transport || '';
+    closeHasteSuggestions();
+  }
+
+  function closeHasteSuggestions() {
+    hasteSuggestions.style.display = 'none';
+    hasteSuggestions.innerHTML = '';
+    hasteSuggestionMatches = [];
+    hasteHighlightedIndex = -1;
+  }
+
+  function renderHasteHighlight() {
+    hasteSuggestions.querySelectorAll('.haste-suggestion-item').forEach((item, i) => {
+      item.style.background = (i === hasteHighlightedIndex) ? 'var(--accent-soft)' : '';
+    });
+    const activeEl = hasteSuggestions.querySelector(`[data-haste-idx="${hasteHighlightedIndex}"]`);
+    if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
+  }
+
+  function showHasteSuggestions(query) {
+    const q = query.trim().toLowerCase();
+    if (!q || hasteDB.length === 0) {
+      closeHasteSuggestions();
+      return;
+    }
+    const matches = hasteDB.filter(h => h.haste.toLowerCase().includes(q)).slice(0, 8);
+    if (matches.length === 0) {
+      closeHasteSuggestions();
+      return;
+    }
+    hasteSuggestionMatches = matches;
+    hasteHighlightedIndex = -1;
+    hasteSuggestions.innerHTML = matches.map((h, i) => `
+      <div class="haste-suggestion-item" data-haste-idx="${i}" style="padding:8px 12px; cursor:pointer; border-bottom:1px solid var(--line); font-size:13px;">
+        <div style="font-weight:600;">${escapeHtml(h.haste)}</div>
+        <div style="font-size:11px; color: var(--muted);">${[h.city, h.transport].filter(Boolean).map(escapeHtml).join(', ')}${h.contact ? ' · ' + escapeHtml(h.contact) : ''}</div>
+      </div>`).join('');
+    hasteSuggestions.querySelectorAll('.haste-suggestion-item').forEach((item, i) => {
+      item.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        selectHaste(matches[i]);
+      });
+      item.addEventListener('mouseenter', () => {
+        hasteHighlightedIndex = i;
+        renderHasteHighlight();
+      });
+    });
+    hasteSuggestions.style.display = 'block';
   }
 
   function lookupPrice(design) {
@@ -2343,6 +2528,12 @@
       const tfEnd = fmtDate(saved.items[0].tradeFairEndDate);
       const tfDateRange = (tfStart && tfEnd) ? `${tfStart} – ${tfEnd}` : (tfStart || tfEnd || '');
       const fairLine = [tfName, tfCity, tfDateRange].filter(Boolean).join(' · ');
+      const tfExtraLine = [
+        p.haste ? `Haste: ${p.haste}` : '',
+        p.custPhone ? `Contact: ${p.custPhone}` : '',
+        p.city ? `City: ${p.city}` : '',
+        p.transport ? `Transport: ${p.transport}` : ''
+      ].filter(Boolean).join(' &nbsp;·&nbsp; ');
       return `<!DOCTYPE html><html><head><title>Order ${escapeHtml(saved.order)}</title>
         <style>
           body { font-family: ${PRINT_FONT}; font-weight: 700; padding: 30px 36px; color: #1a1a1a; }
@@ -2369,8 +2560,8 @@
         <div class="info-row">
           <span><b>Sr. No.:</b> ${escapeHtml(saved.order)}</span>
           <span><b>Date:</b> ${dateStr}</span>
-          <span><b>M/s.:</b> ${escapeHtml(p.custName || '________________________')}</span>
         </div>
+        ${tfExtraLine ? `<div class="extra-party-line">${tfExtraLine}</div>` : ''}
         <table>
           <thead><tr><th>NO.</th><th>DESIGN NO.</th><th>RATE</th><th>QTY</th></tr></thead>
           <tbody>${itemRows}</tbody>
@@ -2747,6 +2938,41 @@
     renderCustomerDBUI();
     showStatus('✓ Customer database cleared', false);
   });
+
+  let clearHasteDBPending = false;
+  hasteDBUploadBtn.addEventListener('click', () => hasteDBFileInput.click());
+  hasteDBFileInput.addEventListener('change', () => {
+    if (hasteDBFileInput.files && hasteDBFileInput.files[0]) {
+      handleHasteDBUpload(hasteDBFileInput.files[0]);
+      hasteDBFileInput.value = '';
+    }
+  });
+  clearHasteDBBtn.addEventListener('click', () => {
+    if (!clearHasteDBPending) {
+      clearHasteDBPending = true;
+      clearHasteDBBtn.textContent = 'Click Again to Confirm';
+      clearHasteDBBtn.style.background = '#b04a4a';
+      clearHasteDBBtn.style.color = 'white';
+      setTimeout(() => {
+        if (clearHasteDBPending) {
+          clearHasteDBPending = false;
+          clearHasteDBBtn.textContent = 'Clear';
+          clearHasteDBBtn.style.background = '';
+          clearHasteDBBtn.style.color = '';
+        }
+      }, 4000);
+      return;
+    }
+    clearHasteDBPending = false;
+    clearHasteDBBtn.textContent = 'Clear';
+    clearHasteDBBtn.style.background = '';
+    clearHasteDBBtn.style.color = '';
+    hasteDB = [];
+    saveHasteDB();
+    renderHasteDBUI();
+    showStatus('✓ Haste database cleared', false);
+  });
+
   document.getElementById('p-custName').addEventListener('input', (e) => {
     showCustNameSuggestions(e.target.value);
   });
@@ -2780,17 +3006,60 @@
     }
   });
 
-  // Enter-key chain: Order Number -> Party Details -> first design row
-  const enterChainIds = ['orderInput', 'p-custName', 'p-custPhone', 'p-haste', 'p-agent', 'p-gstin', 'p-state', 'p-city', 'p-consignee', 'p-transport', 'p-station', 'p-expo', 'p-remarks'];
-  enterChainIds.forEach((id, idx) => {
-    if (id === 'p-custName') return; // has its own keydown handler above
+  document.getElementById('tf-haste').addEventListener('input', (e) => {
+    showHasteSuggestions(e.target.value);
+  });
+  document.getElementById('tf-haste').addEventListener('blur', () => {
+    setTimeout(() => { closeHasteSuggestions(); }, 150);
+  });
+  document.getElementById('tf-haste').addEventListener('keydown', (e) => {
+    const hasSuggestions = hasteSuggestions.style.display === 'block' && hasteSuggestionMatches.length > 0;
+    if (hasSuggestions && e.key === 'ArrowDown') {
+      e.preventDefault();
+      hasteHighlightedIndex = Math.min(hasteHighlightedIndex + 1, hasteSuggestionMatches.length - 1);
+      renderHasteHighlight();
+      return;
+    }
+    if (hasSuggestions && e.key === 'ArrowUp') {
+      e.preventDefault();
+      hasteHighlightedIndex = Math.max(hasteHighlightedIndex - 1, 0);
+      renderHasteHighlight();
+      return;
+    }
+    if (hasSuggestions && e.key === 'Escape') {
+      closeHasteSuggestions();
+      return;
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (hasSuggestions && hasteHighlightedIndex >= 0) {
+        selectHaste(hasteSuggestionMatches[hasteHighlightedIndex]);
+      }
+      document.getElementById('tf-contact').focus();
+    }
+  });
+
+  // Enter-key chain: Order Number -> Party Details -> first design row (different chain per channel)
+  const shopChainIds = ['orderInput', 'p-custName', 'p-custPhone', 'p-haste', 'p-agent', 'p-gstin', 'p-state', 'p-city', 'p-consignee', 'p-transport', 'p-station', 'p-expo', 'p-remarks'];
+  const tradeFairChainIds = ['orderInput', 'tf-haste', 'tf-contact', 'tf-city', 'tf-transport'];
+  function getCurrentChainIds() {
+    return currentChannel === 'tradefair' ? tradeFairChainIds : shopChainIds;
+  }
+  const allChainFieldIds = Array.from(new Set([...shopChainIds, ...tradeFairChainIds]));
+  allChainFieldIds.forEach((id) => {
+    if (id === 'p-custName' || id === 'tf-haste') return; // already have their own keydown handlers above
     const el = document.getElementById(id);
+    if (!el) return;
     el.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter') return;
+      const chain = getCurrentChainIds();
+      if (chain.indexOf(id) === -1) return; // this field isn't part of the active chain right now
       e.preventDefault();
-      const nextId = enterChainIds[idx + 1];
+      const idx = chain.indexOf(id);
+      const nextId = chain[idx + 1];
       if (nextId) {
-        document.getElementById(nextId).focus();
+        const nextEl = document.getElementById(nextId);
+        if (nextEl) nextEl.focus();
       } else {
         const firstDesignField = designRows.querySelector('.design-field');
         if (firstDesignField) firstDesignField.focus();
@@ -2897,8 +3166,9 @@
   fyCancelBtn.addEventListener('click', () => { fyPickerOverlay.style.display = 'none'; });
 
   function startAppAfterLogin() {
-    Promise.all([loadEntries(), loadTradeFairs(), loadShopCounter(), loadTradeFairCounters(), loadCatalog(), loadFY(), loadCustomerDB()]).then(() => {
+    Promise.all([loadEntries(), loadTradeFairs(), loadShopCounter(), loadTradeFairCounters(), loadCatalog(), loadFY(), loadCustomerDB(), loadHasteDB()]).then(() => {
       showScreen('home');
+      updatePartyFieldsVisibility();
     });
   }
 
