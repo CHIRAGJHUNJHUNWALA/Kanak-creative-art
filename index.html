@@ -2541,21 +2541,14 @@
       const tfEnd = fmtDate(saved.items[0].tradeFairEndDate);
       const tfDateRange = (tfStart && tfEnd) ? `${tfStart} – ${tfEnd}` : (tfStart || tfEnd || '');
       const fairLine = [tfName, tfCity, tfDateRange].filter(Boolean).join(' · ');
-      const tfExtraLine = [
-        p.haste ? `Haste: ${p.haste}` : '',
-        p.custPhone ? `Contact: ${p.custPhone}` : '',
-        p.city ? `City: ${p.city}` : '',
-        p.transport ? `Transport: ${p.transport}` : ''
-      ].filter(Boolean).join(' &nbsp;·&nbsp; ');
       return `<!DOCTYPE html><html><head><title>Order ${escapeHtml(saved.order)}</title>
         <style>
           body { font-family: ${PRINT_FONT}; font-weight: 700; padding: 30px 36px; color: #1a1a1a; }
           .letterhead { text-align: center; padding-bottom: 12px; margin-bottom: 14px; }
           .party-name { font-size: 32px; font-weight: 700; letter-spacing: 0.02em; }
           .fair-name { font-size: 15px; margin-top: 6px; font-weight: 700; }
-          .supplier-line { font-size: 15px; font-weight: 700; margin-top: 10px; margin-bottom: 22px; }
-          .info-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; flex-wrap: wrap; gap: 6px; }
-          .extra-party-line { font-size: 11.5px; margin-bottom: 14px; }
+          .supplier-line { font-size: 32px; font-weight: 700; margin-top: 10px; margin-bottom: 22px; text-transform: uppercase; }
+          .info-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; flex-wrap: wrap; gap: 6px; font-weight: 700; }
           table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
           th, td { border: 1px solid #1a1a1a; padding: 8px 10px; text-align: left; }
           th { background: #ffffff; font-weight: 700; }
@@ -2574,7 +2567,12 @@
           <span><b>Sr. No.:</b> ${escapeHtml(saved.order)}</span>
           <span><b>Date:</b> ${dateStr}</span>
         </div>
-        ${tfExtraLine ? `<div class="extra-party-line">${tfExtraLine}</div>` : ''}
+        <div class="info-row">
+          ${p.haste ? `<span><b>Haste:</b> ${escapeHtml(p.haste)}</span>` : ''}
+          ${p.custPhone ? `<span><b>Contact:</b> ${escapeHtml(p.custPhone)}</span>` : ''}
+          ${p.city ? `<span><b>City:</b> ${escapeHtml(p.city)}</span>` : ''}
+          ${p.transport ? `<span><b>Transport:</b> ${escapeHtml(p.transport)}</span>` : ''}
+        </div>
         <table>
           <thead><tr><th>NO.</th><th>DESIGN NO.</th><th>RATE</th><th>QTY</th></tr></thead>
           <tbody>${itemRows}</tbody>
