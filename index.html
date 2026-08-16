@@ -1622,6 +1622,26 @@
     showStatus(`✓ Added: ${design} (1 set)`, false);
   }
 
+  function addScannedDesignToEditRows(design) {
+    syncEditRowsFromDOM();
+    const existing = editingRows.find(r => r.design && r.design.toLowerCase() === design.toLowerCase());
+    if (existing) {
+      existing.sets = (parseInt(existing.sets, 10) || 0) + 1;
+      showStatus(`✓ ${design}: now ${existing.sets} sets`, false);
+    } else {
+      const emptyRow = editingRows.find(r => !r.design || !r.design.trim());
+      if (emptyRow) {
+        emptyRow.design = design;
+        if (!emptyRow.sets) emptyRow.sets = 1;
+      } else {
+        editingRows.push({ id: 'new-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5), design, sets: 1, pcs: 0 });
+      }
+      showStatus(`✓ Added: ${design} (1 set)`, false);
+    }
+    render();
+    if (orderSearchInput.value.trim()) runOrderSearch();
+  }
+
   function handleScanCode(scanned) {
     if (!scanned || !scanned.trim()) return;
     if (catalog.length === 0) {
@@ -1633,7 +1653,11 @@
       showStatus(`⚠️ Unknown code: ${scanned}`, true);
       return;
     }
-    addScannedDesignToForm(design);
+    if (editingOrderKey) {
+      addScannedDesignToEditRows(design);
+    } else {
+      addScannedDesignToForm(design);
+    }
   }
 
   let html5QrCode = null;
@@ -1841,10 +1865,17 @@
           `}
         </div>
       </details>
+      <div class="scan-gun-box" style="margin-bottom:12px;">
+        <div class="dot"></div>
+        <input id="editGunScanInput" placeholder="Click here, then scan with a USB gun to add designs…" autocomplete="off">
+      </div>
       <div id="editRowsWrap">`;
     editingRows.forEach((row, idx) => {
       html += `<div class="order-detail-line" data-edit-row-idx="${idx}">
-        <input type="text" class="edit-row-design" value="${escapeHtml(row.design)}" placeholder="Design number" style="flex:1;">
+        <div style="position:relative; flex:1;">
+          <input type="text" class="edit-row-design" value="${escapeHtml(row.design)}" placeholder="Design number" style="width:100%;">
+          <div class="edit-design-suggestions" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--card); border:1px solid var(--line); border-radius:8px; margin-top:4px; z-index:50; max-height:180px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
+        </div>
         <input type="number" class="edit-row-sets" min="0" value="${row.sets}" style="width:60px;" title="Sets">
         <input type="number" class="edit-row-pcs" min="0" value="${row.pcs || 0}" style="width:60px;" title="Pcs">
         <button class="btn-secondary btn-tiny" data-remove-edit-row="${idx}">Remove</button>
@@ -2065,6 +2096,66 @@
     });
     const editPanel = container.querySelector('[id="editOrderNumberInput"]');
     if (editPanel) {
+      const editGunInput = container.querySelector('#editGunScanInput');
+      if (editGunInput) {
+        let editGunScanTimer = null;
+        editGunInput.addEventListener('input', () => {
+          clearTimeout(editGunScanTimer);
+          editGunScanTimer = setTimeout(() => {
+            const code = editGunInput.value.trim();
+            if (code) {
+              editGunInput.value = '';
+              handleScanCode(code);
+            }
+          }, 150);
+        });
+        editGunInput.addEventListener('keydown', e => {
+          if (e.key === 'Enter') {
+            clearTimeout(editGunScanTimer);
+            const code = editGunInput.value.trim();
+            editGunInput.value = '';
+            if (code) handleScanCode(code);
+          }
+        });
+      }
+      container.querySelectorAll('[data-edit-row-idx]').forEach(rowEl => {
+        const designInput = rowEl.querySelector('.edit-row-design');
+        const suggBox = rowEl.querySelector('.edit-design-suggestions');
+        if (!designInput || !suggBox) return;
+        let rowMatches = [];
+        const closeRowSuggestions = () => { suggBox.style.display = 'none'; suggBox.innerHTML = ''; rowMatches = []; };
+        designInput.addEventListener('input', () => {
+          const q = designInput.value.trim().toLowerCase();
+          if (!q || catalog.length === 0) { closeRowSuggestions(); return; }
+          rowMatches = catalog.filter(d => d.design.toLowerCase().includes(q)).slice(0, 8);
+          if (rowMatches.length === 0) { closeRowSuggestions(); return; }
+          suggBox.innerHTML = rowMatches.map((d, i) => `
+            <div class="edit-design-suggestion-item" data-i="${i}" style="padding:8px 12px; cursor:pointer; border-bottom:1px solid var(--line); font-size:13px; display:flex; justify-content:space-between; gap:8px;">
+              <span style="font-weight:600;">${escapeHtml(d.design)}</span>
+              <span style="color: var(--muted);">${d.price > 0 ? '₹' + d.price.toLocaleString('en-IN') : ''}</span>
+            </div>`).join('');
+          suggBox.querySelectorAll('.edit-design-suggestion-item').forEach((item, i) => {
+            item.addEventListener('mousedown', (e) => {
+              e.preventDefault();
+              designInput.value = rowMatches[i].design;
+              closeRowSuggestions();
+              rowEl.querySelector('.edit-row-sets').focus();
+            });
+          });
+          suggBox.style.display = 'block';
+        });
+        designInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && rowMatches.length > 0 && suggBox.style.display === 'block') {
+            e.preventDefault();
+            designInput.value = rowMatches[0].design;
+            closeRowSuggestions();
+            rowEl.querySelector('.edit-row-sets').focus();
+          } else if (e.key === 'Escape') {
+            closeRowSuggestions();
+          }
+        });
+        designInput.addEventListener('blur', () => { setTimeout(closeRowSuggestions, 150); });
+      });
       container.querySelector('#addEditRowBtn').addEventListener('click', e => {
         e.stopPropagation();
         syncEditRowsFromDOM();
