@@ -404,6 +404,9 @@
           </div>
           <div class="entry-row" style="margin-top:10px;">
             <div class="field"><label>Export To</label><input type="text" id="p-expo"></div>
+            <div class="field"><label>Salesman</label><input type="text" id="p-salesman"></div>
+          </div>
+          <div class="entry-row" style="margin-top:10px;">
             <div class="field"><label>Remarks</label><input type="text" id="p-remarks" placeholder="Notes for this whole order"></div>
           </div>
         </div>
@@ -421,6 +424,9 @@
             <div class="field"><label>Contact</label><input type="text" id="tf-contact" placeholder="98xxxxxxxx"></div>
             <div class="field"><label>Transport</label><input type="text" id="tf-transport"></div>
             <div class="field"><label>City</label><input type="text" id="tf-city"></div>
+          </div>
+          <div class="entry-row" style="margin-top:10px;">
+            <div class="field"><label>Salesman</label><input type="text" id="tf-salesman"></div>
           </div>
         </div>
       </div>
@@ -624,8 +630,8 @@
   const clearCatalogBtn = document.getElementById('clearCatalogBtn');
   const cameraToggleBtn = document.getElementById('cameraToggleBtn');
   const gunScanInput = document.getElementById('gunScanInput');
-  const partyFieldIds = ['p-custName', 'p-custPhone', 'p-haste', 'p-agent', 'p-gstin', 'p-state', 'p-city', 'p-consignee', 'p-transport', 'p-station', 'p-expo', 'p-remarks'];
-  const tradeFairPartyFieldIds = ['tf-clientCode', 'tf-haste', 'tf-contact', 'tf-city', 'tf-transport'];
+  const partyFieldIds = ['p-custName', 'p-custPhone', 'p-haste', 'p-agent', 'p-gstin', 'p-state', 'p-city', 'p-consignee', 'p-transport', 'p-station', 'p-expo', 'p-salesman', 'p-remarks'];
+  const tradeFairPartyFieldIds = ['tf-clientCode', 'tf-haste', 'tf-contact', 'tf-city', 'tf-transport', 'tf-salesman'];
   function getPartyDetailsFromForm() {
     if (currentChannel === 'tradefair') {
       return {
@@ -641,6 +647,7 @@
         transport: document.getElementById('tf-transport').value.trim(),
         station: '',
         expo: '',
+        salesman: document.getElementById('tf-salesman').value.trim(),
         remarks: ''
       };
     }
@@ -657,6 +664,7 @@
       transport: document.getElementById('p-transport').value.trim(),
       station: document.getElementById('p-station').value.trim(),
       expo: document.getElementById('p-expo').value.trim(),
+      salesman: document.getElementById('p-salesman').value.trim(),
       remarks: document.getElementById('p-remarks').value.trim()
     };
   }
@@ -1737,7 +1745,7 @@
       ['Party', party.custName], ['Client Code', party.clientCode], ['Mo.', party.custPhone], ['Haste', party.haste],
       ['Agent', party.agent], ['GSTIN', party.gstin], ['State', party.state], ['City', party.city],
       ['Consignee', party.consignee], ['Transport', party.transport], ['Station', party.station],
-      ['Export To', party.expo], ['Remarks', party.remarks]
+      ['Export To', party.expo], ['Salesman', party.salesman], ['Remarks', party.remarks]
     ].filter(([label, val]) => val);
     if (rows.length === 0) return '';
     return `<div style="font-size:12px; color: var(--muted); margin-bottom:10px; padding:8px 10px; background: var(--bg); border-radius:6px; line-height:1.8;">
@@ -1801,6 +1809,9 @@
             <div class="field"><label>Transport</label><input type="text" id="editP-transport" value="${escapeHtml(editingParty.transport || '')}"></div>
             <div class="field"><label>City</label><input type="text" id="editP-city" value="${escapeHtml(editingParty.city || '')}"></div>
           </div>
+          <div class="entry-row" style="margin-top:10px;">
+            <div class="field"><label>Salesman</label><input type="text" id="editP-salesman" value="${escapeHtml(editingParty.salesman || '')}"></div>
+          </div>
           ` : `
           <div class="entry-row">
             <div class="field"><label>M/s. (Party Name)</label><input type="text" id="editP-custName" value="${escapeHtml(editingParty.custName || '')}"></div>
@@ -1822,6 +1833,9 @@
           </div>
           <div class="entry-row" style="margin-top:10px;">
             <div class="field"><label>Export To</label><input type="text" id="editP-expo" value="${escapeHtml(editingParty.expo || '')}"></div>
+            <div class="field"><label>Salesman</label><input type="text" id="editP-salesman" value="${escapeHtml(editingParty.salesman || '')}"></div>
+          </div>
+          <div class="entry-row" style="margin-top:10px;">
             <div class="field"><label>Remarks</label><input type="text" id="editP-remarks" value="${escapeHtml(editingParty.remarks || '')}"></div>
           </div>
           `}
@@ -1879,6 +1893,7 @@
         transport: document.getElementById('editP-transport').value.trim(),
         station: '',
         expo: '',
+        salesman: document.getElementById('editP-salesman').value.trim(),
         remarks: ''
       };
       return;
@@ -1898,6 +1913,7 @@
         transport: document.getElementById('editP-transport').value.trim(),
         station: document.getElementById('editP-station').value.trim(),
         expo: document.getElementById('editP-expo').value.trim(),
+        salesman: document.getElementById('editP-salesman').value.trim(),
         remarks: document.getElementById('editP-remarks').value.trim()
       };
     }
@@ -2460,10 +2476,10 @@
     const totals = computeTotals();
     let csv = 'Design Number,Total Sets,Total Pcs,Number of Orders,Price\n';
     totals.forEach(t => { csv += `${t.design},${t.totalSets},${t.totalPcs},${t.orderCount},${t.price}\n`; });
-    csv += '\nRaw Entries\nOrder Number,Design Number,Sets,Pcs,Price,Packing,Party Name,Client Code,Phone,Haste,Agent,GSTIN,State,City,Consignee,Transport,Station,Export To,Remarks,Timestamp\n';
+    csv += '\nRaw Entries\nOrder Number,Design Number,Sets,Pcs,Price,Packing,Party Name,Client Code,Phone,Haste,Agent,GSTIN,State,City,Consignee,Transport,Station,Export To,Salesman,Remarks,Timestamp\n';
     entries.filter(matchesCurrentScope).forEach(e => {
       const p = e.party || {};
-      csv += `${e.order || ''},${e.design},${e.sets},${e.pcs || 0},${e.price || 0},${(e.packing || '').replace(/,/g, ';')},${(p.custName || '').replace(/,/g, ';')},${(p.clientCode || '').replace(/,/g, ';')},${(p.custPhone || '')},${(p.haste || '').replace(/,/g, ';')},${(p.agent || '').replace(/,/g, ';')},${(p.gstin || '')},${(p.state || '').replace(/,/g, ';')},${(p.city || '').replace(/,/g, ';')},${(p.consignee || '').replace(/,/g, ';')},${(p.transport || '').replace(/,/g, ';')},${(p.station || '').replace(/,/g, ';')},${(p.expo || '').replace(/,/g, ';')},${(p.remarks || '').replace(/,/g, ';')},${e.time}\n`;
+      csv += `${e.order || ''},${e.design},${e.sets},${e.pcs || 0},${e.price || 0},${(e.packing || '').replace(/,/g, ';')},${(p.custName || '').replace(/,/g, ';')},${(p.clientCode || '').replace(/,/g, ';')},${(p.custPhone || '')},${(p.haste || '').replace(/,/g, ';')},${(p.agent || '').replace(/,/g, ';')},${(p.gstin || '')},${(p.state || '').replace(/,/g, ';')},${(p.city || '').replace(/,/g, ';')},${(p.consignee || '').replace(/,/g, ';')},${(p.transport || '').replace(/,/g, ';')},${(p.station || '').replace(/,/g, ';')},${(p.expo || '').replace(/,/g, ';')},${(p.salesman || '').replace(/,/g, ';')},${(p.remarks || '').replace(/,/g, ';')},${e.time}\n`;
     });
     try {
       const blob = new Blob([csv], { type: 'text/csv' });
@@ -2604,6 +2620,7 @@
           ${p.transport ? `<span><b>Transport:</b> ${escapeHtml(p.transport)}</span>` : ''}
           ${p.city ? `<span><b>City:</b> ${escapeHtml(p.city)}</span>` : ''}
         </div>
+        ${p.salesman ? `<div class="info-row"><span><b>Salesman:</b> ${escapeHtml(p.salesman)}</span></div>` : ''}
         <table>
           <thead><tr><th>NO.</th><th>DESIGN NO.</th><th>RATE</th><th>QTY</th></tr></thead>
           <tbody>${itemRows}</tbody>
@@ -2622,6 +2639,7 @@
         p.station ? `Station: ${p.station}` : '',
         p.consignee ? `Consignee: ${p.consignee}` : '',
         p.expo ? `Export To: ${p.expo}` : '',
+        p.salesman ? `Salesman: ${p.salesman}` : '',
         p.remarks ? `Remarks: ${p.remarks}` : ''
       ].filter(Boolean).join(' &nbsp;·&nbsp; ');
       styleBlock = `
@@ -3094,8 +3112,8 @@
   });
 
   // Enter-key chain: Order Number -> Party Details -> first design row (different chain per channel)
-  const shopChainIds = ['orderInput', 'p-custName', 'p-custPhone', 'p-haste', 'p-agent', 'p-gstin', 'p-state', 'p-city', 'p-consignee', 'p-transport', 'p-station', 'p-expo', 'p-remarks'];
-  const tradeFairChainIds = ['orderInput', 'tf-clientCode', 'tf-haste', 'tf-contact', 'tf-transport', 'tf-city'];
+  const shopChainIds = ['orderInput', 'p-custName', 'p-custPhone', 'p-haste', 'p-agent', 'p-gstin', 'p-state', 'p-city', 'p-consignee', 'p-transport', 'p-station', 'p-expo', 'p-salesman', 'p-remarks'];
+  const tradeFairChainIds = ['orderInput', 'tf-clientCode', 'tf-haste', 'tf-contact', 'tf-transport', 'tf-city', 'tf-salesman'];
   function getCurrentChainIds() {
     return currentChannel === 'tradefair' ? tradeFairChainIds : shopChainIds;
   }
