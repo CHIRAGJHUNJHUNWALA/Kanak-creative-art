@@ -2362,9 +2362,10 @@
         return;
       }
       if (e.key === 'Enter') {
-        if (hasSuggestions && designHighlightIndex >= 0) {
+        if (hasSuggestions) {
           e.preventDefault();
-          selectDesignSuggestion(designMatches[designHighlightIndex]);
+          const pickIndex = designHighlightIndex >= 0 ? designHighlightIndex : 0;
+          selectDesignSuggestion(designMatches[pickIndex]);
           return;
         }
         if (!dField.value.trim()) {
